@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { LS_KEYS } from '../constants';
 
-interface UserInfo {
+export interface UserInfo {
   id: string;
   username: string;
   firstName?: string;
@@ -18,21 +19,21 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  token: localStorage.getItem('access_token'),
-  user: JSON.parse(localStorage.getItem('user_info') || 'null'),
-  permissions: JSON.parse(localStorage.getItem('permissions') || '[]'),
+  token: localStorage.getItem(LS_KEYS.ACCESS_TOKEN),
+  user: JSON.parse(localStorage.getItem(LS_KEYS.USER_INFO) || 'null'),
+  permissions: JSON.parse(localStorage.getItem(LS_KEYS.PERMISSIONS) || '[]'),
 
   login: (token, user, permissions = []) => {
-    localStorage.setItem('access_token', token);
-    localStorage.setItem('user_info', JSON.stringify(user));
-    localStorage.setItem('permissions', JSON.stringify(permissions));
+    localStorage.setItem(LS_KEYS.ACCESS_TOKEN, token);
+    localStorage.setItem(LS_KEYS.USER_INFO, JSON.stringify(user));
+    localStorage.setItem(LS_KEYS.PERMISSIONS, JSON.stringify(permissions));
     set({ token, user, permissions });
   },
 
   logout: () => {
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_info');
-    localStorage.removeItem('permissions');
+    localStorage.removeItem(LS_KEYS.ACCESS_TOKEN);
+    localStorage.removeItem(LS_KEYS.USER_INFO);
+    localStorage.removeItem(LS_KEYS.PERMISSIONS);
     set({ token: null, user: null, permissions: [] });
     // Bắn event hoặc chuyển trang nếu cần
     window.location.href = '/login';

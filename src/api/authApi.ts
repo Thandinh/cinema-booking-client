@@ -1,5 +1,7 @@
+import { LS_KEYS } from '../constants';
 import axiosClient from './axiosClient';
 import type { ApiResponse } from '../types/api.types';
+import type { UserInfo } from '../stores/authStore';
 
 export interface LoginRequest { username: string; password: string; }
 export interface RegisterRequest {
@@ -15,9 +17,16 @@ export const authApi = {
   logout: (token: string) =>
     axiosClient.post<ApiResponse<void>>('/auth/logout', { token }),
 
-  getMyProfile: () =>
-    axiosClient.get<ApiResponse<any>>('/api/v1/users/me'),
+  /** Lấy thông tin tài khoản đang đăng nhập */
+  getMyProfile: (token?: string) =>
+    axiosClient.get<ApiResponse<UserInfo & { email?: string; phone?: string }>>('/api/v1/users/me', {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    }),
 
   register: (data: RegisterRequest) =>
-    axiosClient.post<ApiResponse<any>>('/api/v1/users/register', data),
+    axiosClient.post<ApiResponse<UserInfo>>('/api/v1/users/register', data),
 };
+
+/** Đọc token từ localStorage */
+export const getStoredToken = (): string | null =>
+  localStorage.getItem(LS_KEYS.ACCESS_TOKEN);

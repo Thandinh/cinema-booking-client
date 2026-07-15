@@ -8,6 +8,8 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Polyfill: sockjs-client dùng biến `global` của Node.js, browser cần khai báo trước -->
+    <script>window.global = window.global ?? globalThis;</script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

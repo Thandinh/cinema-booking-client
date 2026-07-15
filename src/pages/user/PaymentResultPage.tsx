@@ -1,6 +1,8 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { AlertTriangle, CheckCircle2, Clock, Home, ReceiptText, Ticket } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { AlertTriangle, CheckCircle2, Clock, Home, QrCode, ReceiptText, Ticket } from 'lucide-react';
+import { bookingApi } from '../../api/bookingApi';
 
 const normalizeStatus = (value: string | null) => {
   if (!value) return 'PENDING';
@@ -14,67 +16,111 @@ const PaymentResultPage = () => {
   const [params] = useSearchParams();
   const bookingId = params.get('bookingId') || params.get('vnp_TxnRef') || params.get('orderId');
   const status = normalizeStatus(params.get('status') || params.get('vnp_ResponseCode') || params.get('resultCode'));
+
   const isSuccess = status === 'SUCCESS';
   const isFailed = status === 'FAILED';
 
+  const { data: booking } = useQuery({
+    queryKey: ['payment-result-booking', bookingId],
+    queryFn: () => bookingApi.getBookingById(bookingId!).then(response => response.data.result),
+    enabled: Boolean(bookingId) && isSuccess,
+    refetchInterval: query => {
+      const details = query.state.data?.bookingDetails ?? [];
+      const allTicketsReady = details.length > 0 && details.every(detail => detail.ticketQrImage || detail.ticketQrCode);
+      return allTicketsReady ? false : 1500;
+    },
+  });
+
+  const ticketCount = booking?.bookingDetails?.filter(detail => detail.ticketQrCode || detail.ticketQrImage).length ?? 0;
   const Icon = isSuccess ? CheckCircle2 : isFailed ? AlertTriangle : Clock;
   const tone = isSuccess
-    ? 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20'
     : isFailed
-      ? 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/20'
-      : 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20';
+      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20'
+      : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20';
+
+  const title = isSuccess
+    ? 'Thanh toán thành công'
+    : isFailed
+      ? 'Thanh toán không thành công'
+      : 'Đang xác nhận thanh toán';
+
+  const description = isSuccess
+    ? 'Booking đã được xác nhận. Mỗi ghế có một vé điện tử và một mã QR check-in riêng.'
+    : isFailed
+      ? 'Giao dịch bị hủy hoặc không được cổng thanh toán chấp nhận. Bạn có thể thử lại từ đơn đặt vé.'
+      : 'Hệ thống đang chờ kết quả từ cổng thanh toán. Vui lòng kiểm tra lại lịch sử đặt vé sau ít phút.';
 
   return (
     <>
       <Helmet>
-        <title>Kết quả thanh toán - CinemaBooking</title>
+        <title>Kết quả thanh toán - Cinema Booking</title>
       </Helmet>
 
-      <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-2xl items-center px-4 py-12 sm:px-6 lg:px-8">
-        <section className="w-full rounded-3xl bg-white p-8 text-center shadow-xl ring-1 ring-slate-200/80 dark:bg-neutral-900 dark:ring-white/10">
-          <div className={`mx-auto grid size-20 place-items-center rounded-3xl ring-1 ${tone}`}>
-            <Icon size={38} />
+      <div className="mx-auto flex min-h-[calc(100vh-56px)] max-w-2xl items-center px-4 py-12 sm:px-6 lg:px-8">
+        <section className="w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-neutral-900 sm:p-8">
+          <div className="flex items-start gap-4">
+            <div className={`grid size-12 shrink-0 place-items-center rounded-lg border ${tone}`}>
+              <Icon size={25} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-500">
+                Kết quả giao dịch
+              </p>
+              <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+                {title}
+              </h1>
+              <p className="mt-3 text-sm leading-6 text-slate-600 dark:text-neutral-300">
+                {description}
+              </p>
+            </div>
           </div>
 
-          <h1 className="mt-6 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
-            {isSuccess ? 'Thanh toán thành công' : isFailed ? 'Thanh toán chưa hoàn tất' : 'Đang chờ xác nhận'}
-          </h1>
-          <p className="mx-auto mt-3 max-w-md text-sm leading-6 cinema-muted">
-            {isSuccess
-              ? 'Vé điện tử của bạn đã được ghi nhận. Bạn có thể xem lại trong mục Vé của tôi.'
-              : isFailed
-                ? 'Giao dịch không thành công hoặc đã bị hủy. Bạn có thể quay lại đơn đặt vé để thử lại.'
-                : 'Hệ thống đang chờ cổng thanh toán xác nhận. Trạng thái sẽ được cập nhật trong Vé của tôi.'}
-          </p>
+          <div className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-neutral-950">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <InfoRow label="Trạng thái" value={status} />
+              <InfoRow label="Mã tham chiếu" value={bookingId ? `#${bookingId.slice(0, 8).toUpperCase()}` : 'Chưa có'} />
+            </div>
+          </div>
 
-          {bookingId && (
-            <div className="mx-auto mt-6 max-w-sm rounded-2xl bg-slate-50 p-4 dark:bg-neutral-950">
-              <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500 dark:text-neutral-500">Mã booking</p>
-              <p className="mt-2 font-black text-slate-950 dark:text-white">#{bookingId.slice(0, 12)}</p>
+          {isSuccess && (
+            <div className="mt-6 rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-950">
+              <div className="flex items-center gap-3">
+                <span className="grid size-11 place-items-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+                  <QrCode size={18} />
+                </span>
+                <div>
+                  <p className="font-black text-slate-950 dark:text-white">
+                    {ticketCount > 0 ? `${ticketCount} vé điện tử đã sẵn sàng` : 'Đang tạo vé điện tử'}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold cinema-muted">
+                    Vào chi tiết vé để xem QR riêng của từng ghế.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Link
-              to={bookingId ? `/my/bookings/${bookingId}` : '/my/bookings'}
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-amber-400 px-5 text-sm font-black text-slate-950 transition hover:bg-amber-300"
-            >
-              <Ticket size={17} />
-              Xem vé
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            {isSuccess ? (
+              <Link
+                to={bookingId ? `/my/bookings/${bookingId}` : '/my/bookings'}
+                className="btn-primary"
+              >
+                <Ticket size={17} /> Xem vé
+              </Link>
+            ) : isFailed && bookingId ? (
+              <Link to={`/checkout/${bookingId}`} className="btn-primary">
+                Thử thanh toán lại
+              </Link>
+            ) : null}
+
+            <Link to="/my/bookings" className="btn-secondary">
+              <ReceiptText size={17} /> Vé của tôi
             </Link>
-            <Link
-              to="/my/bookings"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:text-neutral-200 dark:hover:bg-white/5"
-            >
-              <ReceiptText size={17} />
-              Vé của tôi
-            </Link>
-            <Link
-              to="/"
-              className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-slate-200 px-5 text-sm font-black text-slate-700 transition hover:bg-slate-50 dark:border-white/10 dark:text-neutral-200 dark:hover:bg-white/5"
-            >
-              <Home size={17} />
-              Trang chủ
+
+            <Link to="/" className="btn-ghost">
+              <Home size={17} /> Trang chủ
             </Link>
           </div>
         </section>
@@ -82,5 +128,14 @@ const PaymentResultPage = () => {
     </>
   );
 };
+
+const InfoRow = ({ label, value }: { label: string; value: string }) => (
+  <div>
+    <p className="text-xs font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-500">
+      {label}
+    </p>
+    <p className="mt-1 break-all text-sm font-black text-slate-950 dark:text-white">{value}</p>
+  </div>
+);
 
 export default PaymentResultPage;

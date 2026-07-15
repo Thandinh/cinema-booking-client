@@ -1,198 +1,257 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
-import { CalendarDays, Film, MapPin, Search, Sparkles, Ticket } from 'lucide-react';
+import {
+  Building2,
+  CalendarDays,
+  ChevronRight,
+  Film,
+  MapPin,
+  Search,
+  Ticket,
+  TrendingUp,
+  X,
+} from 'lucide-react';
+import { cinemaApi, type CinemaMapItem } from '../../api/cinemaApi';
 import { movieApi } from '../../api/movieApi';
 import MovieCard from '../../components/MovieCard';
 import MovieCardSkeleton from '../../components/MovieCardSkeleton';
+import QuickBookingWidget from '../../components/QuickBookingWidget';
+import { useDebounce } from '../../hooks/useDebounce';
 
 type TabType = 'NOW_SHOWING' | 'COMING_SOON';
 
-const tabs: { label: string; value: TabType; helper: string }[] = [
-  { label: 'Đang chiếu', value: 'NOW_SHOWING', helper: 'Có thể đặt vé ngay' },
-  { label: 'Sắp chiếu', value: 'COMING_SOON', helper: 'Theo dõi lịch mở bán' },
+const tabs: { label: string; value: TabType; icon: typeof Film }[] = [
+  { label: 'Đang chiếu', value: 'NOW_SHOWING', icon: TrendingUp },
+  { label: 'Sắp chiếu', value: 'COMING_SOON', icon: CalendarDays },
 ];
 
-const FALLBACK_POSTER = 'https://placehold.co/480x720/111827/fbbf24?text=CinemaBooking';
+const groupCinemasByCity = (cinemas: CinemaMapItem[]) =>
+  cinemas.reduce<Record<string, CinemaMapItem[]>>((acc, cinema) => {
+    const city = cinema.city || 'Khu vực khác';
+    acc[city] = [...(acc[city] ?? []), cinema];
+    return acc;
+  }, {});
 
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('NOW_SHOWING');
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 250);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ['movies', activeTab],
-    queryFn: () => movieApi.getAll({ status: activeTab, size: 24 }).then(r => r.data.result),
+    queryFn: () =>
+      movieApi
+        .getAll({ status: activeTab, size: 100 })
+        .then(response => response.data.result),
     staleTime: 1000 * 60 * 5,
   });
 
-  const movies = data?.content ?? [];
-  const keyword = search.trim().toLowerCase();
-  const filtered = keyword
-    ? movies.filter(movie =>
-      [movie.title, movie.genre, movie.director, movie.actors].filter(Boolean).join(' ').toLowerCase().includes(keyword)
-    )
-    : movies;
+  const { data: cinemas = [] } = useQuery({
+    queryKey: ['cinemas', 'map'],
+    queryFn: () => cinemaApi.getMapData().then(response => response.data.result),
+    staleTime: 1000 * 60 * 5,
+  });
 
-  const featured = filtered[0] ?? movies[0];
+  const movies = useMemo(() => {
+    const keyword = debouncedSearch.trim().toLowerCase();
+    const content = data?.content ?? [];
+    if (!keyword) return content;
+    return content.filter(movie =>
+      [movie.title, movie.genre, movie.director, movie.actors]
+        .filter(Boolean)
+        .some(value => value!.toLowerCase().includes(keyword))
+    );
+  }, [data?.content, debouncedSearch]);
+
+  const cinemaGroups = useMemo(() => groupCinemasByCity(cinemas), [cinemas]);
+  const highlightedCinemas = cinemas.slice(0, 6);
 
   return (
     <>
       <Helmet>
-        <title>CinemaBooking - Đặt vé xem phim online</title>
-        <meta name="description" content="Đặt vé xem phim nhanh chóng, chọn ghế trực quan và quản lý vé trong tài khoản." />
+        <title>Cinema Booking - Đặt vé xem phim</title>
+        <meta
+          name="description"
+          content="Xem lịch chiếu, chọn rạp, chọn ghế và thanh toán vé xem phim online."
+        />
       </Helmet>
 
-      <section className="relative overflow-hidden border-b border-slate-200/80 dark:border-white/10">
-        {featured?.posterUrl && (
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-20 blur-sm dark:opacity-25"
-            style={{ backgroundImage: `url(${featured.posterUrl})` }}
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-white/80 via-stone-50/95 to-stone-50 dark:from-neutral-950/75 dark:via-neutral-950/95 dark:to-neutral-950" />
-
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:items-center lg:px-8 lg:py-14">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-amber-800 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20">
-              <Sparkles size={14} />
-              Đặt vé điện ảnh
-            </div>
-            <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight text-slate-950 sm:text-5xl lg:text-6xl dark:text-white">
-              Chọn phim, giữ ghế, nhận vé trong vài phút.
-            </h1>
-            <p className="mt-4 max-w-2xl text-base leading-7 cinema-muted sm:text-lg">
-              Trải nghiệm đặt vé gọn như một sản phẩm thật: lịch chiếu rõ ràng, sơ đồ ghế trực quan và vé được lưu lại trong tài khoản.
-            </p>
-
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              <div className="relative flex-1 sm:max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <input
-                  type="search"
-                  placeholder="Tìm phim, thể loại, đạo diễn..."
-                  value={search}
-                  onChange={event => setSearch(event.target.value)}
-                  className="h-12 w-full rounded-2xl border border-slate-200 bg-white pl-11 pr-4 text-sm font-semibold text-slate-900 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-200/70 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:focus:ring-amber-400/10"
-                />
+      <section className="border-b border-slate-200/70 bg-white dark:border-white/8 dark:bg-neutral-950">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8">
+          <div className="min-w-0">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="cinema-label">Phim đang chiếu</p>
+                <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl dark:text-white">
+                  Hôm nay bạn muốn xem phim gì?
+                </h1>
               </div>
-              <Link
-                to="/cinemas"
-                className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-slate-950 px-5 text-sm font-black text-white shadow-sm transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-amber-100"
-              >
-                <MapPin size={17} />
-                Tìm rạp gần bạn
+
+              <Link to="/cinemas" className="btn-ghost shrink-0">
+                <MapPin size={16} /> Tìm rạp
               </Link>
             </div>
 
-            <div className="mt-8 grid grid-cols-3 gap-3 sm:max-w-xl">
-              {[
-                { label: 'Phim', value: isLoading ? '--' : String(movies.length), icon: Film },
-                { label: 'Đặt vé', value: '24/7', icon: Ticket },
-                { label: 'Lịch chiếu', value: 'Realtime', icon: CalendarDays },
-              ].map(item => (
-                <div key={item.label} className="rounded-2xl bg-white/80 p-4 shadow-sm ring-1 ring-slate-200/80 dark:bg-neutral-900/80 dark:ring-white/10">
-                  <item.icon className="mb-3 text-amber-500" size={18} />
-                  <p className="text-lg font-black text-slate-950 dark:text-white">{item.value}</p>
-                  <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-neutral-500">{item.label}</p>
+            <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="relative min-w-0 flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                <input
+                  type="search"
+                  placeholder="Tìm tên phim, thể loại..."
+                  value={search}
+                  onChange={event => setSearch(event.target.value)}
+                  className="cinema-input pl-10"
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-neutral-200"
+                    aria-label="Xóa tìm kiếm"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-2 overflow-x-auto">
+                {tabs.map(tab => {
+                  const active = activeTab === tab.value;
+                  return (
+                    <button
+                      key={tab.value}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(tab.value);
+                        setSearch('');
+                      }}
+                      className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-lg px-4 text-sm font-black transition-colors ${
+                        active
+                          ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/5 dark:text-neutral-300 dark:hover:bg-white/10'
+                      }`}
+                    >
+                      <tab.icon size={16} />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+              {isLoading
+                ? Array.from({ length: 10 }).map((_, index) => <MovieCardSkeleton key={index} />)
+                : movies.map(movie => <MovieCard key={movie.id} movie={movie} />)}
+            </div>
+
+            {isError && (
+              <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-6 text-center dark:border-red-500/20 dark:bg-red-500/10">
+                <Film className="mx-auto mb-3 text-red-400" size={36} />
+                <p className="font-black text-red-700 dark:text-red-300">Không thể tải danh sách phim</p>
+                <p className="mt-2 text-sm text-red-600/80 dark:text-red-300/80">Kiểm tra backend rồi thử lại.</p>
+              </div>
+            )}
+
+            {!isLoading && !isError && movies.length === 0 && (
+              <div className="mt-6 rounded-lg border border-slate-200 bg-white p-10 text-center dark:border-white/10 dark:bg-neutral-900">
+                <Film className="mx-auto mb-3 text-slate-400" size={36} />
+                <p className="font-black text-slate-950 dark:text-white">Chưa có phim phù hợp</p>
+                <p className="mt-2 text-sm cinema-muted">
+                  {search ? `Không tìm thấy kết quả cho "${search}".` : 'Hiện chưa có phim trong mục này.'}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <aside className="lg:sticky lg:top-24 lg:h-fit">
+            <QuickBookingWidget variant="compact" />
+          </aside>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="cinema-label">Mua vé theo rạp</p>
+            <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+              Xem lịch chiếu tại rạp gần bạn.
+            </h2>
+          </div>
+          <Link to="/cinemas" className="btn-secondary shrink-0">
+            <Building2 size={16} /> Danh sách rạp
+          </Link>
+        </div>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
+            <p className="text-sm font-black text-slate-950 dark:text-white">Khu vực</p>
+            <div className="mt-3 space-y-2">
+              {Object.entries(cinemaGroups).map(([city, items]) => (
+                <div
+                  key={city}
+                  className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold dark:bg-neutral-950"
+                >
+                  <span className="text-slate-700 dark:text-neutral-200">{city}</span>
+                  <span className="text-xs text-slate-500 dark:text-neutral-500">{items.length} rạp</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="hidden md:block">
-            <div className="relative ml-auto max-w-sm">
-              <div className="absolute -inset-4 rounded-[2rem] bg-amber-300/30 blur-2xl dark:bg-amber-400/20" />
-              <div className="relative overflow-hidden rounded-[1.5rem] bg-slate-950 p-3 shadow-2xl ring-1 ring-white/10">
-                <img
-                  src={featured?.posterUrl || FALLBACK_POSTER}
-                  alt={featured?.title || 'CinemaBooking'}
-                  className="aspect-[2/3] w-full rounded-[1rem] object-cover"
-                  onError={(event) => {
-                    (event.target as HTMLImageElement).src = FALLBACK_POSTER;
-                  }}
-                />
-                <div className="absolute bottom-6 left-6 right-6 rounded-2xl bg-white/95 p-4 text-slate-950 shadow-xl backdrop-blur">
-                  <p className="line-clamp-1 text-sm font-black">{featured?.title || 'Phim nổi bật'}</p>
-                  <p className="mt-1 line-clamp-1 text-xs font-semibold text-slate-500">{featured?.genre || 'Lịch chiếu mới nhất'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="sticky top-16 z-30 border-b border-slate-200/80 bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-950/85">
-        <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 sm:px-6 lg:px-8">
-          {tabs.map(tab => {
-            const active = activeTab === tab.value;
-            return (
-              <button
-                key={tab.value}
-                onClick={() => {
-                  setActiveTab(tab.value);
-                  setSearch('');
-                }}
-                className={`min-w-40 rounded-2xl px-4 py-3 text-left transition ${
-                  active
-                    ? 'bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800'
-                }`}
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {highlightedCinemas.map(cinema => (
+              <Link
+                key={cinema.id}
+                to={`/cinemas/${cinema.id}`}
+                className="group rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-white/20 dark:hover:bg-white/5"
               >
-                <span className="block text-sm font-black">{tab.label}</span>
-                <span className={`mt-1 block text-xs font-semibold ${active ? 'text-white/70 dark:text-slate-600' : 'text-slate-500 dark:text-neutral-500'}`}>
-                  {tab.helper}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
+                <div className="flex items-start gap-3">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+                    <MapPin size={18} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-1 font-black text-slate-950 dark:text-white">{cinema.name}</p>
+                    <p className="mt-1 line-clamp-2 text-sm font-medium cinema-muted">{cinema.address}</p>
+                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-black text-amber-600 dark:text-amber-400">
+                      Xem lịch chiếu <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-          <div>
-            <h2 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-              {activeTab === 'NOW_SHOWING' ? 'Phim đang chiếu' : 'Phim sắp chiếu'}
-            </h2>
-            <p className="mt-1 text-sm cinema-muted">
-              {isLoading ? 'Đang tải danh sách phim...' : `${filtered.length} phim phù hợp`}
-            </p>
-          </div>
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              className="self-start rounded-full border border-slate-200 px-4 py-2 text-sm font-bold text-slate-600 transition hover:bg-white dark:border-white/10 dark:text-neutral-300 dark:hover:bg-white/10 sm:self-auto"
-            >
-              Xóa tìm kiếm
-            </button>
-          )}
-        </div>
-
-        {isError && (
-          <div className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-            <p className="font-black">Không thể tải danh sách phim</p>
-            <p className="mt-2 text-sm">Vui lòng kiểm tra backend hoặc kết nối mạng rồi thử lại.</p>
-          </div>
-        )}
-
-        {!isError && (
-          <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-              {isLoading
-                ? Array.from({ length: 12 }).map((_, index) => <MovieCardSkeleton key={index} />)
-                : filtered.map(movie => <MovieCard key={movie.id} movie={movie} />)}
-            </div>
-
-            {!isLoading && filtered.length === 0 && (
-              <div className="mt-8 rounded-3xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200/80 dark:bg-neutral-900 dark:ring-white/10">
-                <Film className="mx-auto text-slate-400" size={42} />
-                <p className="mt-4 font-black text-slate-950 dark:text-white">Chưa có phim phù hợp</p>
-                <p className="mt-2 text-sm cinema-muted">Thử đổi từ khóa tìm kiếm hoặc chuyển sang tab khác.</p>
+            {highlightedCinemas.length === 0 && (
+              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-neutral-900 sm:col-span-2 xl:col-span-3">
+                <Building2 className="mx-auto mb-3 text-slate-400" size={36} />
+                <p className="font-black text-slate-950 dark:text-white">Chưa có dữ liệu rạp</p>
+                <p className="mt-2 text-sm cinema-muted">Hãy kiểm tra dữ liệu cinema trong mock-data.sql.</p>
               </div>
             )}
-          </>
-        )}
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-lg border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-neutral-900">
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              { label: 'Phim đang chiếu', value: data?.totalElements ?? movies.length, icon: Film },
+              { label: 'Rạp đang mở bán', value: cinemas.length, icon: Building2 },
+              { label: 'Ghế được cập nhật', value: 'Trực tiếp', icon: Ticket },
+            ].map(item => (
+              <div key={item.label} className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-lg bg-slate-100 text-slate-700 dark:bg-neutral-950 dark:text-neutral-200">
+                  <item.icon size={18} />
+                </span>
+                <div>
+                  <p className="text-xl font-black text-slate-950 dark:text-white">{item.value}</p>
+                  <p className="text-xs font-bold cinema-muted">{item.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
     </>
   );

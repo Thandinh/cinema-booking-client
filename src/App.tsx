@@ -1,9 +1,9 @@
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HelmetProvider } from 'react-helmet-async';
-import { ErrorBoundary } from 'react-error-boundary';
+import { ErrorBoundary, type FallbackProps } from 'react-error-boundary';
 import AppRouter from './router/AppRouter';
-import './index.css';
+import { ToastContainer } from './components/ui/Toast';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,12 +14,14 @@ const queryClient = new QueryClient({
   },
 });
 
-function ErrorFallback({ error, resetErrorBoundary }: any) {
+function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   return (
-    <div role="alert" className="p-8 text-center text-red-500">
-      <p>Something went wrong:</p>
-      <pre>{error.message}</pre>
-      <button onClick={resetErrorBoundary} className="mt-4 px-4 py-2 bg-slate-800 text-white rounded">Try again</button>
+    <div role="alert" className="flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
+      <p className="text-lg font-black text-slate-950 dark:text-white">Có lỗi xảy ra</p>
+      <pre className="max-w-md overflow-auto rounded-2xl bg-red-50 p-4 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">{(error as Error).message || String(error)}</pre>
+      <button onClick={resetErrorBoundary} className="rounded-2xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white dark:bg-white dark:text-slate-950">
+        Thử lại
+      </button>
     </div>
   );
 }
@@ -31,6 +33,7 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <AppRouter />
+            <ToastContainer />
           </BrowserRouter>
         </QueryClientProvider>
       </HelmetProvider>

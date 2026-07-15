@@ -4,12 +4,13 @@ import type {
   HoldSeatRequest, 
   HoldSeatResponse, 
   CreateBookingRequest, 
-  BookingResponse 
+  BookingResponse,
+  SeatMapItem,
 } from '../types/domain.types';
 
 export const bookingApi = {
   getSeatMap(showtimeId: string) {
-    return axiosClient.get(`/api/v1/bookings/showtimes/${showtimeId}/seats`);
+    return axiosClient.get<ApiResponse<SeatMapItem[]>>(`/api/v1/showtimes/${showtimeId}/seats`);
   },
 
   holdSeats(data: HoldSeatRequest) {

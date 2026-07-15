@@ -13,6 +13,7 @@ export interface Movie {
   director?: string;
   actors?: string;
   language?: string;
+  subtitleLanguage?: string;
   country?: string;
   ageRating?: string;
   ratingImdb?: number;
@@ -45,6 +46,7 @@ export interface Showtime {
   cinemaId: string;
   cinemaName: string;
   cinemaAddress?: string;
+  cinemaCity?: string;
   startTime: string;
   endTime: string;
   basePrice?: number;
@@ -52,6 +54,7 @@ export interface Showtime {
 }
 
 export interface SeatMapItem {
+  seatStatusId?: string;
   seatId: string;
   rowLabel: string;
   seatNumber: number;
@@ -59,7 +62,7 @@ export interface SeatMapItem {
   status: 'AVAILABLE' | 'HOLD' | 'BOOKED';
   rowIndex: number;
   colIndex: number;
-  price: number;          // Giá đã tính sẵn = basePrice * priceMultiplier
+  price: number;
   priceMultiplier?: number;
 }
 
@@ -87,7 +90,13 @@ export interface BookingDetailResponse {
   seatId: string;
   rowLabel: string;
   seatNumber: number;
+  seatType?: 'NORMAL' | 'VIP' | 'COUPLE';
   priceAtBooking: number;
+  ticketId?: string;
+  ticketStatus?: TicketStatus;
+  ticketCheckInTime?: string;
+  ticketQrCode?: string;
+  ticketQrImage?: string;
 }
 
 export interface BookingResponse {
@@ -97,6 +106,8 @@ export interface BookingResponse {
   showtimeId: string;
   movieTitle: string;
   cinemaName: string;
+  cinemaAddress?: string;
+  cinemaCity?: string;
   roomName: string;
   startTime: string;
   totalPrice: number;
@@ -110,4 +121,81 @@ export interface PaymentInitiateRequest {
   bookingId: string;
   method: 'VNPAY' | 'MOMO' | 'CREDIT_CARD';
   amount: number;
+}
+
+// ── Ticket ────────────────────────────────────────────────────
+export type TicketStatus = 'ACTIVE' | 'USED' | 'CANCELLED';
+
+export interface TicketResponse {
+  id: string;
+  qrCode: string;
+  qrImage?: string;
+  status: TicketStatus;
+  checkInTime?: string;
+  createdAt: string;
+  bookingDetailId: string;
+  movieTitle?: string;
+  cinemaName?: string;
+  roomName?: string;
+  startTime?: string;
+  rowLabel?: string;
+  seatNumber?: number;
+}
+
+// ── User Profile ───────────────────────────────────────────────
+export interface UserProfile {
+  id: string;
+  username: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  dob?: string;
+  isActive: boolean;
+  roles?: string[];
+}
+
+export interface UpdateProfileRequest {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  dob?: string;
+}
+
+// ── Analytics ─────────────────────────────────────────────────
+export interface DashboardSummaryResponse {
+  totalRevenue: number;
+  totalBookings: number;
+  totalUsers: number;
+  totalMovies: number;
+  totalTickets: number;
+  totalShowtimes: number;
+  pendingBookings: number;
+  upcomingShowtimes: number;
+}
+
+export interface RevenueByPeriodResponse {
+  period: string;
+  revenue: number;
+  bookingCount: number;
+}
+
+export interface TopMovieRevenueResponse {
+  movieId: string;
+  movieTitle: string;
+  posterUrl?: string;
+  totalRevenue: number;
+  totalBookings: number;
+}
+
+export interface ShowtimeStatsResponse {
+  showtimeId: string;
+  movieTitle: string;
+  cinemaName: string;
+  roomName: string;
+  startTime: string;
+  totalSeats: number;
+  bookedSeats: number;
+  occupancyRate: number;
+  revenue: number;
 }

@@ -21,7 +21,12 @@ export default defineConfig({
       '/ws': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        ws: true,
+        ws: true,    // Bật WebSocket proxy cho STOMP/SockJS
+      },
+      '/ws-native': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        ws: true,    // Native WebSocket endpoint (không SockJS)
       },
     },
   },

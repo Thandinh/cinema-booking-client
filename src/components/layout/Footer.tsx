@@ -1,47 +1,76 @@
 import { Link } from 'react-router-dom';
-import { Film, MapPin, ShieldCheck, Ticket } from 'lucide-react';
+import { Film, MapPin, Ticket } from 'lucide-react';
 
 const Footer = () => (
-  <footer className="mt-16 border-t border-slate-200 bg-white/80 backdrop-blur dark:border-white/10 dark:bg-neutral-950/80">
-    <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-      <div className="grid gap-8 md:grid-cols-[1.4fr_1fr_1fr]">
-        <div>
-          <div className="flex items-center gap-3 text-lg font-black tracking-tight">
-            <span className="grid size-9 place-items-center rounded-xl bg-slate-950 text-amber-300 dark:bg-amber-400 dark:text-slate-950">
-              <Film size={19} />
+  <footer className="mt-16 border-t border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-950">
+    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+        <div className="max-w-sm">
+          <Link to="/" className="inline-flex items-center gap-2">
+            <span className="grid size-8 place-items-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+              <Film size={17} strokeWidth={2.4} />
             </span>
-            CinemaBooking
-          </div>
-          <p className="mt-3 max-w-sm text-sm leading-6 cinema-muted">
-            Nền tảng đặt vé phim với lịch chiếu, sơ đồ ghế và quản lý vé trong một luồng rõ ràng.
+            <span className="text-sm font-black tracking-tight text-slate-950 dark:text-white">
+              Cinema Booking
+            </span>
+          </Link>
+          <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-neutral-400">
+            Đặt vé xem phim, chọn ghế và quản lý vé điện tử trong tài khoản.
           </p>
         </div>
 
-        <div>
-          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-slate-500 dark:text-neutral-500">Điều hướng</h3>
-          <div className="mt-4 grid gap-3 text-sm font-semibold text-slate-700 dark:text-neutral-300">
-            <Link to="/" className="inline-flex items-center gap-2 transition hover:text-amber-600 dark:hover:text-amber-300">
-              <Ticket size={16} /> Phim đang chiếu
-            </Link>
-            <Link to="/cinemas" className="inline-flex items-center gap-2 transition hover:text-amber-600 dark:hover:text-amber-300">
-              <MapPin size={16} /> Rạp chiếu
-            </Link>
-            <Link to="/my/bookings" className="inline-flex items-center gap-2 transition hover:text-amber-600 dark:hover:text-amber-300">
-              <ShieldCheck size={16} /> Vé của tôi
-            </Link>
+        <div className="grid gap-8 sm:grid-cols-2">
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-500">
+              Khám phá
+            </h3>
+            <ul className="mt-3 space-y-2">
+              {[
+                { to: '/', label: 'Phim đang chiếu', icon: Film },
+                { to: '/cinemas', label: 'Rạp chiếu', icon: MapPin },
+                { to: '/my/bookings', label: 'Vé của tôi', icon: Ticket },
+              ].map(item => (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition-colors hover:text-slate-950 dark:text-neutral-400 dark:hover:text-white"
+                  >
+                    <item.icon size={14} />
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
 
-        <div className="rounded-2xl bg-slate-950 p-4 text-white dark:bg-white dark:text-slate-950">
-          <p className="text-sm font-black">Hỗ trợ đặt vé</p>
-          <p className="mt-2 text-sm text-white/70 dark:text-slate-600">
-            Kiểm tra lịch chiếu, chọn ghế và theo dõi trạng thái thanh toán ngay trong tài khoản.
-          </p>
+          <div>
+            <h3 className="text-xs font-black uppercase tracking-[0.14em] text-slate-500 dark:text-neutral-500">
+              Tài khoản
+            </h3>
+            <ul className="mt-3 space-y-2">
+              {[
+                { to: '/login', label: 'Đăng nhập' },
+                { to: '/register', label: 'Đăng ký' },
+                { to: '/profile', label: 'Hồ sơ cá nhân' },
+              ].map(item => (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-950 dark:text-neutral-400 dark:hover:text-white"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 
-      <div className="mt-8 border-t border-slate-200 pt-5 text-center text-xs text-slate-500 dark:border-white/10 dark:text-neutral-500">
-        © {new Date().getFullYear()} CinemaBooking. All rights reserved.
+      <div className="mt-8 border-t border-slate-200 pt-5 dark:border-white/10">
+        <p className="text-xs font-medium text-slate-400 dark:text-neutral-600">
+          © {new Date().getFullYear()} Cinema Booking.
+        </p>
       </div>
     </div>
   </footer>

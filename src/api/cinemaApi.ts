@@ -13,7 +13,7 @@ export interface CinemaMapItem {
 }
 
 export const cinemaApi = {
-  getAll: (params?: { page?: number; size?: number }) =>
+  getAll: (params?: { page?: number; size?: number; keyword?: string }) =>
     axiosClient.get<ApiResponse<PageResult<Cinema>>>('/api/v1/cinemas', { params }),
 
   getById: (id: string) =>
@@ -27,6 +27,16 @@ export const cinemaApi = {
       params: { lat, lng, limit },
     }),
 
-  getShowtimes: (cinemaId: string, params?: { date?: string }) =>
-    axiosClient.get<ApiResponse<Showtime[]>>(`/api/v1/showtimes/cinema/${cinemaId}`, { params }),
+  getShowtimes: (cinemaId: string, params?: { page?: number; size?: number; sort?: string }) =>
+    axiosClient.get<ApiResponse<PageResult<Showtime>>>(`/api/v1/showtimes/cinema/${cinemaId}`, { params }),
+
+  // Admin only
+  create: (data: Partial<Cinema>) =>
+    axiosClient.post<ApiResponse<Cinema>>('/api/v1/cinemas', data),
+
+  update: (id: string, data: Partial<Cinema>) =>
+    axiosClient.put<ApiResponse<Cinema>>(`/api/v1/cinemas/${id}`, data),
+
+  delete: (id: string) =>
+    axiosClient.delete<ApiResponse<void>>(`/api/v1/cinemas/${id}`),
 };
