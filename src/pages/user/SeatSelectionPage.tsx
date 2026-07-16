@@ -40,7 +40,7 @@ const SEAT_STYLES: Record<SeatMapItem['seatType'], Record<SeatMapItem['status'] 
     SELECTED: 'bg-slate-950 text-white border-slate-950 ring-2 ring-slate-300 dark:bg-white dark:text-slate-950 dark:ring-white/20',
   },
   COUPLE: {
-    AVAILABLE: 'bg-rose-50 text-rose-800 border-rose-200 hover:bg-rose-100 dark:bg-rose-500/20 dark:text-rose-200 dark:border-rose-400/20',
+    AVAILABLE: 'bg-cyan-50 text-cyan-800 border-cyan-200 hover:bg-cyan-100 dark:bg-cyan-500/20 dark:text-cyan-200 dark:border-cyan-400/20',
     HOLD: 'bg-orange-100 text-orange-800 border-orange-200 cursor-not-allowed dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/30',
     MY_HOLD: 'bg-slate-950 text-white border-slate-950 ring-2 ring-slate-300 dark:bg-white dark:text-slate-950 dark:ring-white/20 cursor-not-allowed',
     BOOKED: 'bg-red-100 text-red-800 border-red-200 cursor-not-allowed dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30',
@@ -71,6 +71,10 @@ const SeatSelectionPage = () => {
     queryKey: ['seats', showtimeId],
     queryFn: () => bookingApi.getSeatMap(showtimeId!).then(response => response.data.result),
     enabled: Boolean(showtimeId),
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    refetchInterval: 5000,
   });
 
   useEffect(() => {
@@ -336,7 +340,7 @@ const SeatSelectionPage = () => {
                 {[
                   { className: 'bg-slate-200 dark:bg-neutral-800 border border-slate-300 dark:border-white/10', label: 'Ghế thường' },
                   { className: 'bg-indigo-50 dark:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-400/20', label: 'VIP' },
-                  { className: 'bg-rose-50 dark:bg-rose-500/20 border border-rose-200 dark:border-rose-400/20', label: 'Couple' },
+                  { className: 'bg-cyan-50 dark:bg-cyan-500/20 border border-cyan-200 dark:border-cyan-400/20', label: 'Couple' },
                   { className: 'bg-slate-950 dark:bg-white border border-slate-950 dark:border-white', label: 'Đang chọn' },
                   { className: 'bg-orange-100 dark:bg-orange-500/20 border border-orange-200 dark:border-orange-500/30', label: 'Đang giữ' },
                   { className: 'bg-red-100 dark:bg-red-500/20 border border-red-200 dark:border-red-500/30', label: 'Đã đặt' },

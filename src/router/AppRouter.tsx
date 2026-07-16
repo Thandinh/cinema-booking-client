@@ -23,6 +23,7 @@ const AdminDashboardPage   = lazy(() => import('../pages/admin/AdminDashboardPag
 const AdminMoviePage       = lazy(() => import('../pages/admin/AdminMoviePage'));
 const AdminCinemaPage      = lazy(() => import('../pages/admin/AdminCinemaPage'));
 const AdminShowtimePage    = lazy(() => import('../pages/admin/AdminShowtimePage'));
+const AdminBookingPage     = lazy(() => import('../pages/admin/AdminBookingPage'));
 const AdminUserPage        = lazy(() => import('../pages/admin/AdminUserPage'));
 const StaffTicketScannerPage = lazy(() => import('../pages/staff/StaffTicketScannerPage'));
 
@@ -91,6 +92,14 @@ const AppRouter = () => (
           element={
             <ProtectedRoute permission="SHOWTIME_CREATE">
               <AdminShowtimePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/bookings"
+          element={
+            <ProtectedRoute permission="BOOKING_VIEW_ALL">
+              <AdminBookingPage />
             </ProtectedRoute>
           }
         />

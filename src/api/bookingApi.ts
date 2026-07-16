@@ -25,6 +25,10 @@ export const bookingApi = {
     return axiosClient.get<ApiResponse<PageResult<BookingResponse>>>('/api/v1/bookings/my', { params });
   },
 
+  getAllBookings(params?: { status?: string; page?: number; size?: number; sort?: string }) {
+    return axiosClient.get<ApiResponse<PageResult<BookingResponse>>>('/api/v1/bookings', { params });
+  },
+
   getBookingById(id: string) {
     return axiosClient.get<ApiResponse<BookingResponse>>(`/api/v1/bookings/${id}`);
   },

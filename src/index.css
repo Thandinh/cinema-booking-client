@@ -28,6 +28,47 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  input,
+  select,
+  textarea {
+    color-scheme: light;
+  }
+
+  .dark input,
+  .dark select,
+  .dark textarea {
+    color-scheme: dark;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #0f172a;
+    box-shadow: 0 0 0 1000px #ffffff inset;
+    caret-color: #f59e0b;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
+  .dark input:-webkit-autofill,
+  .dark input:-webkit-autofill:hover,
+  .dark input:-webkit-autofill:focus,
+  .dark textarea:-webkit-autofill,
+  .dark textarea:-webkit-autofill:hover,
+  .dark textarea:-webkit-autofill:focus,
+  .dark select:-webkit-autofill,
+  .dark select:-webkit-autofill:hover,
+  .dark select:-webkit-autofill:focus {
+    -webkit-text-fill-color: #ffffff;
+    box-shadow: 0 0 0 1000px #171717 inset;
+    caret-color: #fbbf24;
+  }
+
   ::-webkit-scrollbar { width: 5px; height: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { @apply rounded-full bg-slate-300 dark:bg-neutral-700; }
@@ -48,7 +89,7 @@
 }
 
 @utility cinema-input {
-  @apply h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-950 outline-none transition-colors placeholder:font-medium placeholder:text-slate-400 focus:border-slate-400 focus:bg-white dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:placeholder:text-neutral-600 dark:focus:border-neutral-500;
+  @apply h-11 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-950 caret-amber-500 outline-none transition-colors placeholder:font-medium placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:text-slate-950 dark:border-white/10 dark:bg-neutral-900 dark:text-white dark:caret-amber-400 dark:placeholder:text-neutral-600 dark:focus:border-neutral-500 dark:focus:bg-neutral-900 dark:focus:text-white;
 }
 
 @utility btn-primary {

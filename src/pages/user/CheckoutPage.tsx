@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
@@ -13,9 +13,11 @@ import {
   ReceiptText,
   ShieldCheck,
   Ticket,
+  XCircle,
 } from 'lucide-react';
 import { bookingApi } from '../../api/bookingApi';
 import { paymentApi } from '../../api/paymentApi';
+import { toast } from '../../components/ui/Toast';
 import { formatDateTime, formatMoney } from '../../utils/format';
 
 type PaymentMethod = 'VNPAY' | 'MOMO' | 'CREDIT_CARD';
@@ -36,6 +38,7 @@ const CheckoutPage = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
   const [method, setMethod] = useState<PaymentMethod>('VNPAY');
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
 
   const { data: booking, isLoading, isError } = useQuery({
     queryKey: ['booking', bookingId],
@@ -49,7 +52,31 @@ const CheckoutPage = () => {
     return seats.map(seat => `${seat.rowLabel}${seat.seatNumber}`).join(', ');
   }, [booking]);
 
-  const canPay = Boolean(booking && booking.status === 'PENDING' && booking.totalPrice > 0);
+  useEffect(() => {
+    if (!booking?.paymentExpiresAt || booking.status !== 'PENDING') {
+      setRemainingSeconds(null);
+      return;
+    }
+
+    const updateRemaining = () => {
+      const diff = Math.max(0, Math.floor((new Date(booking.paymentExpiresAt!).getTime() - Date.now()) / 1000));
+      setRemainingSeconds(diff);
+    };
+
+    updateRemaining();
+    const timer = window.setInterval(updateRemaining, 1000);
+    return () => window.clearInterval(timer);
+  }, [booking?.paymentExpiresAt, booking?.status]);
+
+  useEffect(() => {
+    if (booking?.status === 'PENDING' && remainingSeconds === 0) {
+      toast.error('Đã hết thời gian giữ vé. Vui lòng chọn ghế lại.');
+      navigate(`/seat-selection/${booking.showtimeId}`, { replace: true });
+    }
+  }, [booking?.showtimeId, booking?.status, navigate, remainingSeconds]);
+
+  const paymentExpired = booking?.status === 'EXPIRED' || remainingSeconds === 0;
+  const canPay = Boolean(booking && booking.status === 'PENDING' && booking.totalPrice > 0 && !paymentExpired);
 
   const paymentMutation = useMutation({
     mutationFn: () => paymentApi.initiatePayment(bookingId!, method, booking?.totalPrice ?? 0),
@@ -63,6 +90,17 @@ const CheckoutPage = () => {
     },
     onError: () => {
       navigate(`/payment/result?bookingId=${bookingId}&status=FAILED`, { replace: true });
+    },
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => bookingApi.cancelBooking(bookingId!),
+    onSuccess: () => {
+      toast.success('Đã hủy đơn giữ ghế');
+      navigate(`/seat-selection/${booking?.showtimeId}`, { replace: true });
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Không thể hủy đơn giữ ghế');
     },
   });
 
@@ -215,6 +253,23 @@ const CheckoutPage = () => {
               </div>
             </div>
 
+            {booking.status === 'PENDING' && remainingSeconds !== null && (
+              <div className={`mt-5 rounded-lg p-3 text-center ring-1 ${
+                remainingSeconds <= 60
+                  ? 'bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/20'
+                  : 'bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20'
+              }`}>
+                <p className="text-[11px] font-black uppercase tracking-[0.14em]">Thời gian giữ vé</p>
+                <p className="mt-1 text-2xl font-black tabular-nums">{formatCountdown(remainingSeconds)}</p>
+              </div>
+            )}
+
+            {booking.status === 'EXPIRED' && (
+              <div className="mt-5 rounded-lg bg-red-50 p-3 text-center text-sm font-bold text-red-700 ring-1 ring-red-200 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/20">
+                Đơn giữ ghế đã hết hạn. Vui lòng chọn ghế lại.
+              </div>
+            )}
+
             <button
               type="button"
               onClick={() => paymentMutation.mutate()}
@@ -225,6 +280,18 @@ const CheckoutPage = () => {
               {booking.status === 'SUCCESS' ? 'Đã thanh toán' : 'Thanh toán VNPay'}
             </button>
 
+            {booking.status === 'PENDING' && (
+              <button
+                type="button"
+                onClick={() => cancelMutation.mutate()}
+                disabled={cancelMutation.isPending}
+                className="btn-ghost mt-2 w-full text-red-600 hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-50 dark:text-red-400 dark:hover:border-red-500/20 dark:hover:bg-red-500/10"
+              >
+                {cancelMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                Hủy và chọn lại ghế
+              </button>
+            )}
+
             <p className="mt-4 rounded-lg bg-slate-50 p-3 text-center text-[11px] font-semibold leading-relaxed cinema-muted dark:bg-neutral-950">
               Ghế chỉ được xác nhận sau khi cổng thanh toán trả về thành công.
             </p>
@@ -233,6 +300,12 @@ const CheckoutPage = () => {
       </div>
     </>
   );
+};
+
+const formatCountdown = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+  const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${seconds}`;
 };
 
 const InfoBlock = ({ label, value }: { label: string; value: string }) => (

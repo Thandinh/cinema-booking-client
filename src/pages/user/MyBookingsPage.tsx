@@ -9,7 +9,7 @@ import { bookingApi } from '../../api/bookingApi';
 import type { BookingResponse } from '../../types/domain.types';
 import { formatMoney, formatDateTime } from '../../utils/format';
 
-type BookingStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | string;
+type BookingStatus = 'PENDING' | 'SUCCESS' | 'FAILED' | 'CANCELLED' | 'EXPIRED' | string;
 type BookingItem = BookingResponse & {
   status: BookingStatus;
   showtime?: { movieTitle?: string; startTime?: string; roomName?: string; cinemaName?: string };
@@ -20,6 +20,7 @@ const STATUS_CONFIG = {
   PENDING:   { label: 'Chờ thanh toán', icon: Clock,       bg: 'bg-amber-50 dark:bg-amber-500/10',     text: 'text-amber-700 dark:text-amber-300',     ring: 'ring-amber-200 dark:ring-amber-500/20',   bar: 'bg-amber-400' },
   FAILED:    { label: 'Thất bại',       icon: XCircle,     bg: 'bg-red-50 dark:bg-red-500/10',         text: 'text-red-700 dark:text-red-300',         ring: 'ring-red-200 dark:ring-red-500/20',       bar: 'bg-red-500' },
   CANCELLED: { label: 'Đã hủy',         icon: AlertCircle, bg: 'bg-slate-100 dark:bg-white/5',         text: 'text-slate-600 dark:text-neutral-400',   ring: 'ring-slate-200 dark:ring-white/10',       bar: 'bg-slate-400' },
+  EXPIRED:   { label: 'Hết hạn',        icon: Clock,       bg: 'bg-slate-100 dark:bg-white/5',         text: 'text-slate-600 dark:text-neutral-400',   ring: 'ring-slate-200 dark:ring-white/10',       bar: 'bg-slate-400' },
 };
 
 const getField = (b: BookingItem, key: 'movieTitle' | 'cinemaName' | 'roomName' | 'startTime') =>

@@ -26,12 +26,13 @@ type MovieScheduleGroup = {
   times: Showtime[];
 };
 
-const shortDate = (value: string) =>
-  new Intl.DateTimeFormat('vi-VN', {
-    weekday: 'short',
-    day: '2-digit',
-    month: '2-digit',
-  }).format(new Date(value));
+const toLocalDate = (value: string) => new Date(`${value}T00:00:00`);
+
+const weekdayLabel = (value: string) =>
+  new Intl.DateTimeFormat('vi-VN', { weekday: 'short' }).format(toLocalDate(value));
+
+const dayMonthLabel = (value: string) =>
+  new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(toLocalDate(value));
 
 const groupByMovie = (showtimes: Showtime[]) =>
   showtimes.reduce<Record<string, MovieScheduleGroup>>((acc, showtime) => {
@@ -225,14 +226,16 @@ const CinemaDetailPage = () => {
                       key={date}
                       type="button"
                       onClick={() => setSelectedDate(date)}
-                      className={`shrink-0 rounded-lg px-4 py-2.5 text-left transition-colors ${
+                      className={`grid h-[58px] min-w-[78px] shrink-0 place-items-center rounded-lg px-4 py-2.5 text-center transition-colors ${
                         active
                           ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
                           : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-white/5'
                       }`}
                     >
-                      <span className="block text-sm font-black">{shortDate(date).split(' ')[0]}</span>
-                      <span className="mt-0.5 block text-xs font-bold opacity-70">{shortDate(date).replace(shortDate(date).split(' ')[0], '').trim()}</span>
+                      <span>
+                        <span className="block text-sm font-black leading-none">{weekdayLabel(date)}</span>
+                        <span className="mt-1.5 block text-xs font-bold leading-none opacity-70">{dayMonthLabel(date)}</span>
+                      </span>
                     </button>
                   );
                 })}

@@ -8,6 +8,7 @@ const normalizeStatus = (value: string | null) => {
   if (!value) return 'PENDING';
   const upper = value.toUpperCase();
   if (upper === '00' || upper === 'SUCCESS' || upper === 'PAID') return 'SUCCESS';
+  if (upper === 'EXPIRED') return 'EXPIRED';
   if (upper === 'FAILED' || upper === 'FAIL' || upper === 'CANCELLED') return 'FAILED';
   return upper;
 };
@@ -19,12 +20,14 @@ const PaymentResultPage = () => {
 
   const isSuccess = status === 'SUCCESS';
   const isFailed = status === 'FAILED';
+  const isExpired = status === 'EXPIRED';
 
   const { data: booking } = useQuery({
     queryKey: ['payment-result-booking', bookingId],
     queryFn: () => bookingApi.getBookingById(bookingId!).then(response => response.data.result),
-    enabled: Boolean(bookingId) && isSuccess,
+    enabled: Boolean(bookingId),
     refetchInterval: query => {
+      if (!isSuccess) return false;
       const details = query.state.data?.bookingDetails ?? [];
       const allTicketsReady = details.length > 0 && details.every(detail => detail.ticketQrImage || detail.ticketQrCode);
       return allTicketsReady ? false : 1500;
@@ -32,21 +35,25 @@ const PaymentResultPage = () => {
   });
 
   const ticketCount = booking?.bookingDetails?.filter(detail => detail.ticketQrCode || detail.ticketQrImage).length ?? 0;
-  const Icon = isSuccess ? CheckCircle2 : isFailed ? AlertTriangle : Clock;
+  const Icon = isSuccess ? CheckCircle2 : (isFailed || isExpired) ? AlertTriangle : Clock;
   const tone = isSuccess
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20'
-    : isFailed
+    : (isFailed || isExpired)
       ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20'
       : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:border-amber-500/20';
 
   const title = isSuccess
     ? 'Thanh toán thành công'
+    : isExpired
+      ? 'Đơn giữ vé đã hết hạn'
     : isFailed
       ? 'Thanh toán không thành công'
       : 'Đang xác nhận thanh toán';
 
   const description = isSuccess
     ? 'Booking đã được xác nhận. Mỗi ghế có một vé điện tử và một mã QR check-in riêng.'
+    : isExpired
+      ? 'Thời gian giữ ghế đã kết thúc nên hệ thống đã nhả ghế về sơ đồ. Vui lòng đặt lại nếu bạn vẫn muốn xem suất này.'
     : isFailed
       ? 'Giao dịch bị hủy hoặc không được cổng thanh toán chấp nhận. Bạn có thể thử lại từ đơn đặt vé.'
       : 'Hệ thống đang chờ kết quả từ cổng thanh toán. Vui lòng kiểm tra lại lịch sử đặt vé sau ít phút.';
@@ -109,9 +116,9 @@ const PaymentResultPage = () => {
               >
                 <Ticket size={17} /> Xem vé
               </Link>
-            ) : isFailed && bookingId ? (
-              <Link to={`/checkout/${bookingId}`} className="btn-primary">
-                Thử thanh toán lại
+            ) : (isFailed || isExpired) && booking?.showtimeId ? (
+              <Link to={`/seat-selection/${booking.showtimeId}`} className="btn-primary">
+                Chọn ghế lại
               </Link>
             ) : null}
 

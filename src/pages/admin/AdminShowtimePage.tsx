@@ -15,7 +15,7 @@ import { formatDateTime, formatMoney, formatTime } from '../../utils/format';
 
 // ─── API ──────────────────────────────────────────────────
 const showtimeAdminApi = {
-  getAll: (params?: { page?: number; size?: number }) =>
+  getAll: (params?: { page?: number; size?: number; sort?: string }) =>
     axiosClient.get<ApiResponse<PageResult<Showtime>>>('/api/v1/showtimes', { params }),
   create: (data: Record<string, unknown>) =>
     axiosClient.post<ApiResponse<Showtime>>('/api/v1/showtimes', data),
@@ -169,9 +169,9 @@ const AdminShowtimePage = () => {
   const [page, setPage] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin-showtimes', page],
-    queryFn: () => showtimeAdminApi.getAll({ page, size: 15 }).then(r => r.data.result),
+    queryFn: () => showtimeAdminApi.getAll({ page, size: 15, sort: 'startTime,asc' }).then(r => r.data.result),
     placeholderData: (prev) => prev,
   });
 
@@ -227,6 +227,13 @@ const AdminShowtimePage = () => {
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {isLoading ? (
                   <tr><td colSpan={6} className="py-10 text-center"><Loader2 size={24} className="mx-auto animate-spin text-amber-500" /></td></tr>
+                ) : isError ? (
+                  <tr><td colSpan={6} className="py-10 text-center font-semibold text-red-500">
+                    Không thể tải danh sách suất chiếu.
+                    <p className="mt-1 text-xs text-slate-500 dark:text-neutral-500">
+                      {(error as any)?.response?.data?.message || 'Vui lòng kiểm tra backend và thử tải lại trang.'}
+                    </p>
+                  </td></tr>
                 ) : showtimes.length === 0 ? (
                   <tr><td colSpan={6} className="py-10 text-center font-semibold text-slate-500">
                     <Calendar className="mx-auto mb-2 text-slate-300" size={32} />

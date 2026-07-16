@@ -62,7 +62,7 @@ const Navbar = () => {
             {navItems.map(item => <NavItem key={item.to} {...item} />)}
             {user && <NavItem to="/my/bookings" label="Vé của tôi" icon={Ticket} />}
             {isStaff && <NavItem to="/staff/scanner" label="Soát vé" icon={ScanLine} />}
-            {isAdmin && <NavItem to="/admin/dashboard" label="Thống kê" icon={BarChart3} />}
+            {isAdmin && <NavItem to="/admin/dashboard" label="Tổng quan" icon={BarChart3} />}
           </nav>
 
           <div className="flex items-center gap-2">
@@ -128,7 +128,7 @@ const Navbar = () => {
             ))}
             {user && <MobileNavItem to="/my/bookings" label="Vé của tôi" icon={Ticket} onClick={() => setMobileOpen(false)} />}
             {isStaff && <MobileNavItem to="/staff/scanner" label="Soát vé" icon={ScanLine} onClick={() => setMobileOpen(false)} />}
-            {isAdmin && <MobileNavItem to="/admin/dashboard" label="Thống kê" icon={BarChart3} onClick={() => setMobileOpen(false)} />}
+            {isAdmin && <MobileNavItem to="/admin/dashboard" label="Tổng quan" icon={BarChart3} onClick={() => setMobileOpen(false)} />}
 
             <div className="mt-3 flex gap-2 border-t border-slate-100 pt-3 dark:border-white/8">
               {user ? (

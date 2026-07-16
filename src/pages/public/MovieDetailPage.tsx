@@ -30,6 +30,11 @@ const FALLBACK_CITY = 'Khu vực khác';
 const DEFAULT_CITY = 'TP Hồ Chí Minh';
 
 const getShowtimeCity = (showtime: Showtime) => showtime.cinemaCity?.trim() || FALLBACK_CITY;
+const toLocalDate = (value: string) => new Date(`${value}T00:00:00`);
+const weekdayLabel = (value: string) =>
+  new Intl.DateTimeFormat('vi-VN', { weekday: 'short' }).format(toLocalDate(value));
+const dayMonthLabel = (value: string) =>
+  new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(toLocalDate(value));
 
 const MovieDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -354,17 +359,19 @@ const MovieDetailPage = () => {
                         key={date}
                         type="button"
                         onClick={() => setSelectedDate(date)}
-                        className={`shrink-0 rounded-lg px-4 py-2.5 text-left transition-colors ${
+                        className={`grid h-[58px] min-w-[78px] shrink-0 place-items-center rounded-lg px-4 py-2.5 text-center transition-colors ${
                           active
                             ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
                             : 'bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-slate-50 dark:bg-neutral-900 dark:text-neutral-300 dark:ring-white/10 dark:hover:bg-white/5'
                         }`}
                       >
-                        <span className="block text-sm font-black">
-                          {new Intl.DateTimeFormat('vi-VN', { weekday: 'short' }).format(new Date(date))}
-                        </span>
-                        <span className="mt-0.5 block text-xs font-bold opacity-70">
-                          {new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(new Date(date))}
+                        <span>
+                          <span className="block text-sm font-black leading-none">
+                            {weekdayLabel(date)}
+                          </span>
+                          <span className="mt-1.5 block text-xs font-bold leading-none opacity-70">
+                            {dayMonthLabel(date)}
+                          </span>
                         </span>
                       </button>
                     );

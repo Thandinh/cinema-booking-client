@@ -40,7 +40,7 @@ const AdminDashboardPage = () => {
       <div className="flex min-h-[420px] items-center justify-center">
         <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-white/10">
           <Loader2 className="animate-spin text-amber-500" size={18} />
-          Đang tải dữ liệu thống kê
+          Đang tải dữ liệu tổng quan
         </div>
       </div>
     );
@@ -51,7 +51,7 @@ const AdminDashboardPage = () => {
       <div className="mx-auto flex max-w-xl flex-col items-center px-4 py-20 text-center">
         <AlertCircle className="mb-4 text-slate-400" size={48} />
         <p className="text-lg font-black">Không có dữ liệu</p>
-        <p className="mt-2 text-sm cinema-muted">Không thể tải dữ liệu thống kê từ máy chủ.</p>
+        <p className="mt-2 text-sm cinema-muted">Không thể tải dữ liệu tổng quan từ máy chủ.</p>
       </div>
     );
   }
@@ -66,14 +66,14 @@ const AdminDashboardPage = () => {
   return (
     <>
       <Helmet>
-        <title>Dashboard Thống kê - CinemaBooking</title>
+        <title>Tổng quan - CinemaBooking</title>
       </Helmet>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-8">
           <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-amber-800 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20">
             <BarChart3 size={14} />
-            Admin Dashboard
+            Tổng quan
           </div>
           <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">
             Chào mừng trở lại, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-400">{user?.firstName || user?.username || 'Admin'}</span>! 👋

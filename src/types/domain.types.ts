@@ -103,6 +103,10 @@ export interface BookingResponse {
   id: string;
   secureToken: string;
   status: string;
+  customerId?: string;
+  customerUsername?: string;
+  customerName?: string;
+  customerEmail?: string;
   showtimeId: string;
   movieTitle: string;
   cinemaName: string;
@@ -110,6 +114,7 @@ export interface BookingResponse {
   cinemaCity?: string;
   roomName: string;
   startTime: string;
+  paymentExpiresAt?: string;
   totalPrice: number;
   discountAmount: number;
   promotionCode?: string;
