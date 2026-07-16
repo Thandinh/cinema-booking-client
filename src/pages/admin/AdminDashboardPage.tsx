@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import {
@@ -12,6 +12,50 @@ import {
 import { analyticsApi } from '../../api/analyticsApi';
 import { useAuthStore } from '../../stores/authStore';
 import { formatMoney } from '../../utils/format';
+
+type ChartPoint = {
+  period: string;
+  label: string;
+  revenue: number;
+  totalBookings: number;
+  totalTickets: number;
+};
+
+const toNumber = (value: unknown) => {
+  const numberValue = Number(value ?? 0);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+};
+
+const formatChartLabel = (period: string, mode: 'daily' | 'monthly') => {
+  if (mode === 'monthly') {
+    const [year, month] = period.split('-');
+    return month && year ? `${month}/${year}` : period;
+  }
+
+  const date = new Date(`${period}T00:00:00`);
+  return Number.isNaN(date.getTime())
+    ? period
+    : date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+};
+
+const buildEmptyChartData = (mode: 'daily' | 'monthly'): ChartPoint[] => {
+  const today = new Date();
+
+  if (mode === 'monthly') {
+    return Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(today.getFullYear(), today.getMonth() - 11 + index, 1);
+      const period = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      return { period, label: formatChartLabel(period, mode), revenue: 0, totalBookings: 0, totalTickets: 0 };
+    });
+  }
+
+  return Array.from({ length: 30 }, (_, index) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - 29 + index);
+    const period = date.toISOString().slice(0, 10);
+    return { period, label: formatChartLabel(period, mode), revenue: 0, totalBookings: 0, totalTickets: 0 };
+  });
+};
 
 const AdminDashboardPage = () => {
   const { user } = useAuthStore();
@@ -34,6 +78,33 @@ const AdminDashboardPage = () => {
     queryKey: ['analytics-top-movies'],
     queryFn: () => analyticsApi.getTopMovies().then(r => r.data.result),
   });
+
+  const chartData = useMemo<ChartPoint[]>(() => {
+    const baseData = buildEmptyChartData(period);
+    if (!revenueData || revenueData.length === 0) return baseData;
+
+    const revenueByPeriod = new Map(
+      revenueData.map(item => [item.period, {
+        revenue: toNumber(item.revenue),
+        totalBookings: toNumber(item.totalBookings ?? item.bookingCount),
+        totalTickets: toNumber(item.totalTickets),
+      }])
+    );
+
+    return baseData.map(item => ({
+      ...item,
+      ...(revenueByPeriod.get(item.period) ?? {}),
+    }));
+  }, [period, revenueData]);
+
+  const hasRevenueData = chartData.some(item => item.revenue > 0 || item.totalBookings > 0 || item.totalTickets > 0);
+
+  const normalizedTopMovies = useMemo(() => (topMovies ?? []).map(movie => ({
+    movieId: movie.movieId,
+    title: movie.movieTitle ?? movie.title ?? 'Chưa có tên phim',
+    revenue: toNumber(movie.totalRevenue ?? movie.revenue),
+    totalBookings: toNumber(movie.totalBookings),
+  })), [topMovies]);
 
   if (loadingSummary || loadingRevenue || loadingTopMovies) {
     return (
@@ -66,7 +137,7 @@ const AdminDashboardPage = () => {
   return (
     <>
       <Helmet>
-        <title>Tổng quan - CinemaBooking</title>
+        <title>Tổng quan - cinemabooking.vn</title>
       </Helmet>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -79,7 +150,7 @@ const AdminDashboardPage = () => {
             Chào mừng trở lại, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-400">{user?.firstName || user?.username || 'Admin'}</span>! 👋
           </h1>
           <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-neutral-400">
-            Dưới đây là tổng quan hiệu suất hệ thống CinemaBooking của bạn hôm nay.
+            Dưới đây là tổng quan hiệu suất hệ thống cinemabooking.vn của bạn hôm nay.
           </p>
         </div>
 
@@ -131,9 +202,9 @@ const AdminDashboardPage = () => {
               </div>
             </div>
 
-            <div className="h-[340px] w-full text-xs font-semibold">
+            <div className="relative h-[340px] w-full text-xs font-semibold">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
@@ -142,7 +213,7 @@ const AdminDashboardPage = () => {
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-slate-200 dark:text-white/10" />
                   <XAxis 
-                    dataKey="period" 
+                    dataKey="label" 
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fill: 'currentColor' }} 
@@ -154,11 +225,12 @@ const AdminDashboardPage = () => {
                     tickLine={false} 
                     tick={{ fill: 'currentColor' }} 
                     className="text-slate-500 dark:text-neutral-400" 
-                    tickFormatter={(value) => `${value / 1000000}M`}
+                    tickFormatter={(value) => `${Number(value) / 1000000}M`}
                   />
                   <RechartsTooltip 
                     contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                     formatter={(value: any) => [formatMoney(value as number), 'Doanh thu']}
+                    labelFormatter={(_, payload) => payload?.[0]?.payload?.period ?? ''}
                     labelStyle={{ fontWeight: 800, marginBottom: '0.5rem', color: '#0f172a' }}
                   />
                   <Area 
@@ -171,6 +243,14 @@ const AdminDashboardPage = () => {
                   />
                 </AreaChart>
               </ResponsiveContainer>
+              {!hasRevenueData && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="rounded-2xl bg-white/90 px-5 py-3 text-center shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900/90 dark:ring-white/10">
+                    <p className="text-sm font-black text-slate-900 dark:text-white">Chưa có doanh thu trong kỳ này</p>
+                    <p className="mt-1 text-xs cinema-muted">Biểu đồ sẽ tự cập nhật khi có thanh toán thành công.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
@@ -184,22 +264,22 @@ const AdminDashboardPage = () => {
             </div>
             
             <div className="space-y-2">
-              {(topMovies ?? []).map((movie, idx) => (
+              {normalizedTopMovies.map((movie, idx) => (
                 <div key={movie.movieId} className="group flex items-center gap-4 rounded-2xl p-3 transition-all duration-300 hover:bg-slate-50 dark:hover:bg-white/5">
                   <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-slate-100 text-sm font-black text-slate-500 transition-colors group-hover:bg-amber-100 group-hover:text-amber-700 dark:bg-white/5 dark:text-neutral-400 dark:group-hover:bg-amber-400/20 dark:group-hover:text-amber-300">
                     {idx + 1}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-slate-950 dark:text-white">{movie.movieTitle}</p>
+                    <p className="truncate font-bold text-slate-950 dark:text-white">{movie.title}</p>
                     <p className="mt-0.5 text-xs font-semibold cinema-muted">{movie.totalBookings} đơn đặt vé</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-black text-amber-700 dark:text-amber-400">{formatMoney(movie.totalRevenue)}</p>
+                    <p className="font-black text-amber-700 dark:text-amber-400">{formatMoney(movie.revenue)}</p>
                   </div>
                 </div>
               ))}
               
-              {(!topMovies || topMovies.length === 0) && (
+              {normalizedTopMovies.length === 0 && (
                 <p className="text-center text-sm cinema-muted">Chưa có dữ liệu</p>
               )}
             </div>

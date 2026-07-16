@@ -4,15 +4,21 @@ import type { ApiResponse } from '../types/api.types';
 import type { UserInfo } from '../stores/authStore';
 
 export interface LoginRequest { username: string; password: string; }
+export interface GoogleLoginRequest { idToken: string; }
 export interface RegisterRequest {
-  username: string; password: string;
-  firstName: string; lastName: string;
-  email: string; phone?: string;
+  username: string;
+  email: string;
+  password: string;
 }
+export interface VerifyEmailRequest { token: string; }
+export interface ResendVerificationRequest { email: string; }
 
 export const authApi = {
   login: (data: LoginRequest) =>
     axiosClient.post<ApiResponse<{ token: string; authenticated: boolean }>>('/auth/token', data),
+
+  googleLogin: (data: GoogleLoginRequest) =>
+    axiosClient.post<ApiResponse<{ token: string; authenticated: boolean }>>('/auth/google', data),
 
   logout: (token: string) =>
     axiosClient.post<ApiResponse<void>>('/auth/logout', { token }),
@@ -25,6 +31,12 @@ export const authApi = {
 
   register: (data: RegisterRequest) =>
     axiosClient.post<ApiResponse<UserInfo>>('/api/v1/users/register', data),
+
+  verifyEmail: (data: VerifyEmailRequest) =>
+    axiosClient.post<ApiResponse<void>>('/api/v1/users/verify-email', data),
+
+  resendVerification: (data: ResendVerificationRequest) =>
+    axiosClient.post<ApiResponse<void>>('/api/v1/users/resend-verification', data),
 };
 
 /** Đọc token từ localStorage */

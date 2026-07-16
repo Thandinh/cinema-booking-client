@@ -154,6 +154,7 @@ export interface UserProfile {
   firstName?: string;
   lastName?: string;
   email?: string;
+  avatarUrl?: string;
   phone?: string;
   dob?: string;
   isActive: boolean;
@@ -165,6 +166,7 @@ export interface UpdateProfileRequest {
   lastName?: string;
   phone?: string;
   dob?: string;
+  avatarUrl?: string;
 }
 
 // ── Analytics ─────────────────────────────────────────────────
@@ -183,14 +185,19 @@ export interface RevenueByPeriodResponse {
   period: string;
   revenue: number;
   bookingCount: number;
+  totalBookings?: number;
+  totalTickets?: number;
 }
 
 export interface TopMovieRevenueResponse {
   movieId: string;
   movieTitle: string;
+  title?: string;
   posterUrl?: string;
   totalRevenue: number;
+  revenue?: number;
   totalBookings: number;
+  totalTicketsSold?: number;
 }
 
 export interface ShowtimeStatsResponse {

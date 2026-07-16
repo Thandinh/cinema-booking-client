@@ -61,7 +61,7 @@ const PaymentResultPage = () => {
   return (
     <>
       <Helmet>
-        <title>Kết quả thanh toán - Cinema Booking</title>
+        <title>Kết quả thanh toán - cinemabooking.vn</title>
       </Helmet>
 
       <div className="mx-auto flex min-h-[calc(100vh-56px)] max-w-2xl items-center px-4 py-12 sm:px-6 lg:px-8">

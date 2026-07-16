@@ -117,7 +117,7 @@ const StaffTicketScannerPage = () => {
   return (
     <>
       <Helmet>
-        <title>Soát vé | CinemaBooking Staff</title>
+        <title>Soát vé | cinemabooking.vn Staff</title>
       </Helmet>
 
       <div className="page-container-md py-8">

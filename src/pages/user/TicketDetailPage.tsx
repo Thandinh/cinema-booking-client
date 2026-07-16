@@ -105,7 +105,7 @@ const TicketDetailPage = () => {
   return (
     <>
       <Helmet>
-        <title>{booking.movieTitle} - Vé điện tử | CinemaBooking</title>
+        <title>{booking.movieTitle} - Vé điện tử | cinemabooking.vn</title>
       </Helmet>
 
       <div className="page-container py-8">
@@ -122,7 +122,7 @@ const TicketDetailPage = () => {
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-400">
-                    CinemaBooking - E-Ticket
+                    cinemabooking.vn - E-Ticket
                   </p>
                   <h1 className="mt-2 text-2xl font-black leading-tight sm:text-3xl">
                     {booking.movieTitle}

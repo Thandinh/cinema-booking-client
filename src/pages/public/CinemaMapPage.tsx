@@ -148,7 +148,7 @@ const CinemaMapPage = () => {
   return (
     <>
       <Helmet>
-        <title>Rạp chiếu - Cinema Booking</title>
+        <title>Rạp chiếu - cinemabooking.vn</title>
       </Helmet>
 
       <div className="page-container py-6">

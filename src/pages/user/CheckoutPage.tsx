@@ -131,7 +131,7 @@ const CheckoutPage = () => {
   return (
     <>
       <Helmet>
-        <title>Thanh toán - CinemaBooking</title>
+        <title>Thanh toán - cinemabooking.vn</title>
       </Helmet>
 
       <div className="page-container-md py-8">

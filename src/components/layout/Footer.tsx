@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Film, MapPin, Ticket } from 'lucide-react';
+import BrandLogo from '../BrandLogo';
 
 const Footer = () => (
   <footer className="mt-16 border-t border-slate-200 bg-white dark:border-white/10 dark:bg-neutral-950">
@@ -7,12 +8,7 @@ const Footer = () => (
       <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
         <div className="max-w-sm">
           <Link to="/" className="inline-flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
-              <Film size={17} strokeWidth={2.4} />
-            </span>
-            <span className="text-sm font-black tracking-tight text-slate-950 dark:text-white">
-              Cinema Booking
-            </span>
+            <BrandLogo className="text-lg" />
           </Link>
           <p className="mt-3 text-sm leading-6 text-slate-500 dark:text-neutral-400">
             Đặt vé xem phim, chọn ghế và quản lý vé điện tử trong tài khoản.
@@ -69,7 +65,7 @@ const Footer = () => (
 
       <div className="mt-8 border-t border-slate-200 pt-5 dark:border-white/10">
         <p className="text-xs font-medium text-slate-400 dark:text-neutral-600">
-          © {new Date().getFullYear()} Cinema Booking.
+          © {new Date().getFullYear()} cinemabooking.vn.
         </p>
       </div>
     </div>

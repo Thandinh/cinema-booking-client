@@ -3,8 +3,9 @@ import {
   BarChart3, Building2, Calendar, Film, LogOut, Moon, QrCode, ReceiptText, Sun, Users,
 } from 'lucide-react';
 import { authApi } from '../../api/authApi';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore, type UserInfo } from '../../stores/authStore';
 import { useTheme } from '../../stores/themeStore';
+import BrandLogo from '../BrandLogo';
 
 // ─── Nav items visible to Admin ──────────────────────────
 const adminNavItems = [
@@ -29,10 +30,6 @@ const AdminLayout = () => {
     finally { logout(); }
   };
 
-  const initials = user?.firstName
-    ? `${user.firstName.charAt(0)}${user.lastName?.charAt(0) ?? ''}`.toUpperCase()
-    : user?.username?.substring(0, 2).toUpperCase() ?? 'A';
-
   const role = hasPermission('DASHBOARD_VIEW') ? 'Admin' : 'Staff';
 
   // Only show nav items user has permission for
@@ -44,11 +41,8 @@ const AdminLayout = () => {
       <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-white/8 dark:bg-neutral-900 lg:flex">
         {/* Brand */}
         <div className="flex h-16 items-center gap-3 border-b border-slate-200 px-5 dark:border-white/8">
-          <span className="grid size-8 place-items-center rounded-lg bg-slate-950 text-amber-300 dark:bg-amber-400 dark:text-slate-950">
-            <Film size={16} />
-          </span>
           <div>
-            <p className="text-sm font-black text-slate-950 dark:text-white leading-none">CinemaBooking</p>
+            <BrandLogo className="text-base leading-none" />
             <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 leading-none mt-0.5 uppercase tracking-wider">
               {role} Portal
             </p>
@@ -84,9 +78,7 @@ const AdminLayout = () => {
         {/* User footer */}
         <div className="border-t border-slate-100 p-3 dark:border-white/8">
           <div className="flex items-center gap-3 rounded-xl p-2.5">
-            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-400 text-sm font-black text-slate-950">
-              {initials}
-            </span>
+            {user && <UserAvatar user={user} className="size-9 rounded-xl text-sm" />}
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-black text-slate-950 dark:text-white">
                 {user?.firstName || user?.username}
@@ -117,18 +109,18 @@ const AdminLayout = () => {
         {/* Mobile top bar */}
         <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-white/8 dark:bg-neutral-900 lg:hidden">
           <div className="flex items-center gap-2.5">
-            <span className="grid size-8 place-items-center rounded-lg bg-slate-950 text-amber-300 dark:bg-amber-400 dark:text-slate-950">
-              <Film size={15} />
-            </span>
-            <span className="text-sm font-black text-slate-950 dark:text-white">{role} Portal</span>
+            <BrandLogo className="text-base" compact />
+            <span className="text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">{role}</span>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={toggleTheme} className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-neutral-400 dark:hover:bg-white/10">
               {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
             </button>
-            <Link to="/profile" className="grid size-8 place-items-center rounded-lg bg-amber-400 text-xs font-black text-slate-950">
-              {initials}
-            </Link>
+            {user && (
+              <Link to="/profile">
+                <UserAvatar user={user} className="size-8 rounded-lg text-xs" />
+              </Link>
+            )}
             <button onClick={handleLogout} className="grid size-8 place-items-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 dark:text-neutral-400">
               <LogOut size={15} />
             </button>
@@ -144,6 +136,29 @@ const AdminLayout = () => {
 };
 
 /* ── Sub-component ── */
+const UserAvatar = ({ user, className }: { user: UserInfo; className: string }) => {
+  const initials = user.firstName
+    ? `${user.firstName.charAt(0)}${user.lastName?.charAt(0) ?? ''}`.toUpperCase()
+    : user.username.substring(0, 2).toUpperCase();
+
+  if (user.avatarUrl) {
+    return (
+      <img
+        src={user.avatarUrl}
+        alt={user.username}
+        referrerPolicy="no-referrer"
+        className={`${className} shrink-0 object-cover shadow-sm ring-1 ring-slate-200 dark:ring-white/10`}
+      />
+    );
+  }
+
+  return (
+    <span className={`grid shrink-0 place-items-center bg-gradient-to-br from-amber-400 to-orange-400 font-black text-slate-950 ${className}`}>
+      {initials}
+    </span>
+  );
+};
+
 const SidebarLink = ({ to, label, icon: Icon }: { to: string; label: string; icon: typeof Film }) => {
   const { pathname } = useLocation();
   const active = pathname === to || (to !== '/' && pathname.startsWith(to));

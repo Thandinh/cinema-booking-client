@@ -13,6 +13,7 @@ const CinemaMapPage        = lazy(() => import('../pages/public/CinemaMapPage'))
 const CinemaDetailPage     = lazy(() => import('../pages/public/CinemaDetailPage'));
 const LoginPage            = lazy(() => import('../pages/public/LoginPage'));
 const RegisterPage         = lazy(() => import('../pages/public/RegisterPage'));
+const VerifyEmailPage      = lazy(() => import('../pages/public/VerifyEmailPage'));
 const SeatSelectionPage    = lazy(() => import('../pages/user/SeatSelectionPage'));
 const MyBookingsPage       = lazy(() => import('../pages/user/MyBookingsPage'));
 const CheckoutPage         = lazy(() => import('../pages/user/CheckoutPage'));
@@ -59,6 +60,7 @@ const AppRouter = () => (
       <Route element={<AuthLayout />}>
         <Route path="/login"    element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
       </Route>
 
       {/* ══ ADMIN / STAFF — sidebar layout ══ */}

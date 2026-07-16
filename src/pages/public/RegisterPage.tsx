@@ -1,22 +1,33 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
-  CheckCircle2, Film, Loader2, Lock, Mail,
-  Phone, Star, Ticket, User, UserPlus,
+  CheckCircle2, Loader2, Lock, Mail,
+  Star, Ticket, User, UserPlus,
 } from 'lucide-react';
 import * as z from 'zod';
 import { authApi } from '../../api/authApi';
+import BrandLogo from '../../components/BrandLogo';
+
+const passwordSchema = z.string()
+  .min(8, 'Mật khẩu cần ít nhất 8 ký tự')
+  .max(72, 'Mật khẩu tối đa 72 ký tự')
+  .regex(/[a-z]/, 'Cần có ít nhất 1 chữ thường')
+  .regex(/[A-Z]/, 'Cần có ít nhất 1 chữ hoa')
+  .regex(/[0-9]/, 'Cần có ít nhất 1 chữ số')
+  .regex(/[^A-Za-z0-9\s]/, 'Cần có ít nhất 1 ký tự đặc biệt')
+  .regex(/^\S+$/, 'Không được chứa khoảng trắng');
 
 const registerSchema = z.object({
-  firstName: z.string().min(1, 'Nhập tên'),
-  lastName:  z.string().min(1, 'Nhập họ'),
   username:  z.string().min(4, 'Ít nhất 4 ký tự').max(50),
   email:     z.string().email('Email không hợp lệ'),
-  password:  z.string().min(6, 'Ít nhất 6 ký tự'),
-  phone:     z.string().optional(),
+  password:  passwordSchema,
+  confirmPassword: z.string().min(1, 'Nhập lại mật khẩu'),
+}).refine(data => data.password === data.confirmPassword, {
+  message: 'Mật khẩu nhập lại không khớp',
+  path: ['confirmPassword'],
 });
 type RegisterForm = z.infer<typeof registerSchema>;
 
@@ -26,8 +37,30 @@ const BENEFITS = [
   { icon: CheckCircle2, text: 'Lưu toàn bộ lịch sử đặt vé trong tài khoản' },
 ];
 
+const getRegisterErrorMessage = (err: any) => {
+  const code = err.response?.data?.code;
+  const message = String(err.response?.data?.message || '').toLowerCase();
+
+  if (code === 1002 || message.includes('username already exists')) {
+    return 'Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.';
+  }
+  if (code === 1003 || message.includes('email already exists')) {
+    return 'Email đã được sử dụng. Vui lòng dùng email khác hoặc đăng nhập.';
+  }
+  if (message.includes('username') && message.includes('email') && message.includes('exists')) {
+    return 'Tên đăng nhập và email đã tồn tại. Vui lòng kiểm tra lại.';
+  }
+  if (code === 1011 || message.includes('password must')) {
+    return 'Mật khẩu cần 8-72 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa khoảng trắng.';
+  }
+  if (code === 1012 || message.includes('invalid email')) {
+    return 'Email không hợp lệ. Vui lòng kiểm tra lại.';
+  }
+
+  return 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.';
+};
+
 const RegisterPage = () => {
-  const navigate = useNavigate();
   const [errorMsg, setErrorMsg] = useState('');
   const [success, setSuccess] = useState(false);
 
@@ -38,20 +71,18 @@ const RegisterPage = () => {
   const onSubmit = async (data: RegisterForm) => {
     setErrorMsg('');
     try {
-      await authApi.register(data);
+      const { confirmPassword, ...payload } = data;
+      await authApi.register(payload);
       setSuccess(true);
-      window.setTimeout(() => navigate('/login'), 1600);
     } catch (err: any) {
-      setErrorMsg(
-        err.response?.data?.message || 'Đăng ký thất bại. Tên đăng nhập hoặc email đã tồn tại.',
-      );
+      setErrorMsg(getRegisterErrorMessage(err));
     }
   };
 
   return (
     <>
       <Helmet>
-        <title>Đăng ký — CinemaBooking</title>
+        <title>Đăng ký — cinemabooking.vn</title>
       </Helmet>
 
       <div className="min-h-[calc(100vh-64px)] lg:grid lg:grid-cols-[1fr_520px]">
@@ -63,10 +94,7 @@ const RegisterPage = () => {
 
           {/* Logo */}
           <div className="relative flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-amber-400 text-slate-950">
-              <Film size={20} strokeWidth={2.5} />
-            </span>
-            <span className="text-lg font-black tracking-tight text-white">CinemaBooking</span>
+            <BrandLogo className="text-2xl" inverted />
           </div>
 
           {/* Hero copy */}
@@ -95,7 +123,7 @@ const RegisterPage = () => {
           </div>
 
           <p className="relative text-xs font-semibold text-white/30">
-            © {new Date().getFullYear()} CinemaBooking — Hoàn toàn miễn phí
+            © {new Date().getFullYear()} cinemabooking.vn — Hoàn toàn miễn phí
           </p>
         </div>
 
@@ -104,10 +132,7 @@ const RegisterPage = () => {
           <div className="w-full max-w-md">
             {/* Mobile logo */}
             <div className="mb-8 flex items-center gap-3 lg:hidden">
-              <span className="grid size-9 place-items-center rounded-xl bg-slate-950 text-amber-300 dark:bg-amber-400 dark:text-slate-950">
-                <Film size={18} />
-              </span>
-              <span className="font-black text-slate-950 dark:text-white">CinemaBooking</span>
+              <BrandLogo className="text-xl" />
             </div>
 
             <div className="mb-7">
@@ -128,29 +153,11 @@ const RegisterPage = () => {
             {success && (
               <div className="mb-5 flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300">
                 <CheckCircle2 size={16} />
-                Đăng ký thành công! Đang chuyển sang đăng nhập...
+                Đăng ký thành công! Vui lòng kiểm tra email để xác thực tài khoản trước khi đăng nhập.
               </div>
             )}
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* Name row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="cinema-label mb-2 block">Họ</label>
-                  <input {...register('lastName')} placeholder="Nguyễn" className="cinema-input" />
-                  {errors.lastName && (
-                    <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.lastName.message}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="cinema-label mb-2 block">Tên</label>
-                  <input {...register('firstName')} placeholder="An" className="cinema-input" />
-                  {errors.firstName && (
-                    <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.firstName.message}</p>
-                  )}
-                </div>
-              </div>
-
               {/* Username */}
               <div>
                 <label className="cinema-label mb-2 block">Tên đăng nhập</label>
@@ -175,25 +182,33 @@ const RegisterPage = () => {
                 )}
               </div>
 
-              {/* Phone + Password row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="cinema-label mb-2 block">Điện thoại</label>
-                  <div className="relative">
-                    <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-                    <input {...register('phone')} placeholder="090..." className="cinema-input pl-10" />
-                  </div>
+              {/* Password */}
+              <div>
+                <label className="cinema-label mb-2 block">Mật khẩu</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                  <input {...register('password')} type="password" autoComplete="new-password" placeholder="••••••••" className="cinema-input pl-10" />
                 </div>
-                <div>
-                  <label className="cinema-label mb-2 block">Mật khẩu</label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
-                    <input {...register('password')} type="password" autoComplete="new-password" placeholder="••••••••" className="cinema-input pl-10" />
-                  </div>
-                  {errors.password && (
-                    <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.password.message}</p>
-                  )}
+                {errors.password && (
+                  <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.password.message}</p>
+                )}
+                {!errors.password && (
+                  <p className="mt-1.5 text-xs font-semibold cinema-muted">
+                    8-72 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
+                  </p>
+                )}
+              </div>
+
+              {/* Confirm password */}
+              <div>
+                <label className="cinema-label mb-2 block">Nhập lại mật khẩu</label>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                  <input {...register('confirmPassword')} type="password" autoComplete="new-password" placeholder="••••••••" className="cinema-input pl-10" />
                 </div>
+                {errors.confirmPassword && (
+                  <p className="mt-1.5 text-xs font-semibold text-red-500">{errors.confirmPassword.message}</p>
+                )}
               </div>
 
               <button
@@ -208,7 +223,7 @@ const RegisterPage = () => {
               </button>
 
               <p className="text-center text-xs font-semibold cinema-muted">
-                Bằng cách đăng ký, bạn đồng ý với điều khoản sử dụng của CinemaBooking.
+                Bằng cách đăng ký, bạn đồng ý với điều khoản sử dụng của cinemabooking.vn.
               </p>
             </form>
 

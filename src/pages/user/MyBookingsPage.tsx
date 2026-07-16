@@ -37,7 +37,7 @@ const MyBookingsPage = () => {
   return (
     <>
       <Helmet>
-        <title>Vé của tôi — CinemaBooking</title>
+        <title>Vé của tôi — cinemabooking.vn</title>
       </Helmet>
 
       <div className="page-container-md py-8">

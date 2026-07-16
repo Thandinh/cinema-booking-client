@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
@@ -34,6 +34,7 @@ const roomApi = {
 // ─── Schema ──────────────────────────────────────────────
 const showtimeSchema = z.object({
   movieId: z.string().min(1, 'Chọn phim'),
+  city: z.string().min(1, 'Chọn thành phố'),
   cinemaId: z.string().min(1, 'Chọn rạp'),
   roomId: z.string().min(1, 'Chọn phòng'),
   startTime: z.string().min(1, 'Chọn giờ bắt đầu'),
@@ -51,10 +52,11 @@ const ShowtimeFormModal = ({
   onSubmit: (data: Record<string, unknown>) => void;
   isSubmitting: boolean;
 }) => {
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<ShowtimeFormData>({
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<ShowtimeFormData>({
     resolver: zodResolver(showtimeSchema) as any,
   });
 
+  const selectedCity = watch('city');
   const selectedCinemaId = watch('cinemaId');
 
   // Fetch data for selects
@@ -70,6 +72,20 @@ const ShowtimeFormModal = ({
     enabled: isOpen,
   });
 
+  const cities = useMemo(() => {
+    const values = (cinemasData ?? [])
+      .map(cinema => cinema.city?.trim())
+      .filter((city): city is string => Boolean(city));
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [cinemasData]);
+
+  const filteredCinemas = useMemo(() => {
+    if (!selectedCity) return [];
+    return (cinemasData ?? [])
+      .filter(cinema => cinema.city === selectedCity)
+      .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }, [cinemasData, selectedCity]);
+
   const { data: roomsData } = useQuery({
     queryKey: ['modal-rooms', selectedCinemaId],
     queryFn: () => roomApi.getByCinema(selectedCinemaId).then(r => r.data.result),
@@ -80,10 +96,24 @@ const ShowtimeFormModal = ({
     if (isOpen) reset();
   }, [isOpen, reset]);
 
+  useEffect(() => {
+    if (!isOpen || selectedCity || cities.length !== 1) return;
+    setValue('city', cities[0], { shouldValidate: true });
+  }, [cities, isOpen, selectedCity, setValue]);
+
+  useEffect(() => {
+    setValue('cinemaId', '');
+    setValue('roomId', '');
+  }, [selectedCity, setValue]);
+
+  useEffect(() => {
+    setValue('roomId', '');
+  }, [selectedCinemaId, setValue]);
+
   if (!isOpen) return null;
 
   const handleFormSubmit = (data: ShowtimeFormData) => {
-    const { cinemaId: _, ...rest } = data;
+    const { city: _city, cinemaId: _cinemaId, ...rest } = data;
     onSubmit({
       ...rest,
       startTime: new Date(rest.startTime).toISOString(),
@@ -94,7 +124,7 @@ const ShowtimeFormModal = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-xl overflow-y-auto rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200/80 dark:bg-neutral-900 dark:ring-white/10 fade-in-up max-h-[90vh]">
+      <div className="relative w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200/80 dark:bg-neutral-900 dark:ring-white/10 fade-in-up max-h-[90vh]">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-white/10">
           <h2 className="text-xl font-black text-slate-950 dark:text-white">Tạo suất chiếu mới</h2>
           <button onClick={onClose} className="grid size-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10">
@@ -112,12 +142,20 @@ const ShowtimeFormModal = ({
             {errors.movieId && <p className="mt-1 text-xs text-red-500">{errors.movieId.message}</p>}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div>
+              <label className="cinema-label mb-2 block">Thành phố *</label>
+              <select {...register('city')} className="cinema-input">
+                <option value="">-- Chọn thành phố --</option>
+                {cities.map(city => <option key={city} value={city}>{city}</option>)}
+              </select>
+              {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city.message}</p>}
+            </div>
             <div>
               <label className="cinema-label mb-2 block">Rạp *</label>
-              <select {...register('cinemaId')} className="cinema-input">
+              <select {...register('cinemaId')} className="cinema-input" disabled={!selectedCity}>
                 <option value="">-- Chọn rạp --</option>
-                {cinemasData?.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {filteredCinemas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               {errors.cinemaId && <p className="mt-1 text-xs text-red-500">{errors.cinemaId.message}</p>}
             </div>

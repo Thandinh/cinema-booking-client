@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,6 +7,20 @@ import { Film, Lock, LogIn, Loader2, ShieldCheck, Ticket, User } from 'lucide-re
 import * as z from 'zod';
 import { authApi } from '../../api/authApi';
 import { useAuthStore } from '../../stores/authStore';
+import BrandLogo from '../../components/BrandLogo';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (options: { client_id: string; callback: (response: { credential?: string }) => void }) => void;
+          renderButton: (element: HTMLElement, options: Record<string, unknown>) => void;
+        };
+      };
+    };
+  }
+}
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Vui lòng nhập tên đăng nhập'),
@@ -26,6 +40,9 @@ const LoginPage = () => {
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || '/';
   const [errorMsg, setErrorMsg] = useState('');
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -53,18 +70,109 @@ const LoginPage = () => {
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
+        avatarUrl: user.avatarUrl,
+        emailVerified: user.emailVerified,
       }, Array.from(allPermissions));
 
       navigate(from, { replace: true });
-    } catch {
+    } catch (err: any) {
+      const code = err.response?.data?.code;
+      const message = String(err.response?.data?.message || '').toLowerCase();
+      if (code === 1020 || message.includes('verify your email')) {
+        setErrorMsg('Tài khoản chưa xác thực email. Vui lòng kiểm tra hộp thư hoặc email xác thực mới nhất.');
+        return;
+      }
       setErrorMsg('Sai tên đăng nhập hoặc mật khẩu. Vui lòng thử lại.');
     }
   };
 
+  const completeGoogleLogin = useCallback(async (token: string) => {
+    const profileRes = await authApi.getMyProfile(token);
+    const user = profileRes.data.result;
+
+    const allPermissions = new Set<string>();
+    if ((user as any).roles) {
+      (user as any).roles.forEach((role: any) => {
+        role.permissions?.forEach((perm: any) => allPermissions.add(perm.name));
+      });
+    }
+
+    login(token, {
+      id: user.id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      emailVerified: user.emailVerified,
+    }, Array.from(allPermissions));
+
+    navigate(from, { replace: true });
+  }, [from, login, navigate]);
+
+  const handleGoogleCredential = useCallback(async (idToken?: string) => {
+    if (!idToken) {
+      setErrorMsg('Không nhận được thông tin đăng nhập Google. Vui lòng thử lại.');
+      return;
+    }
+
+    setErrorMsg('');
+    setGoogleLoading(true);
+    try {
+      const res = await authApi.googleLogin({ idToken });
+      await completeGoogleLogin(res.data.result.token);
+    } catch (err: any) {
+      setErrorMsg(err.response?.data?.message || 'Đăng nhập Google thất bại. Vui lòng thử lại.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, [completeGoogleLogin]);
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return;
+
+    let cancelled = false;
+    const renderGoogleButton = () => {
+      if (cancelled || !window.google || !googleButtonRef.current) return;
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: response => void handleGoogleCredential(response.credential),
+      });
+
+      googleButtonRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        type: 'standard',
+        theme: 'outline',
+        size: 'large',
+        shape: 'rectangular',
+        text: 'continue_with',
+        logo_alignment: 'left',
+        width: 360,
+      });
+    };
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButton();
+    } else {
+      const existingScript = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+      const script = existingScript ?? document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = renderGoogleButton;
+      if (!existingScript) document.head.appendChild(script);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [googleClientId, handleGoogleCredential]);
+
   return (
     <>
       <Helmet>
-        <title>Đăng nhập — CinemaBooking</title>
+        <title>Đăng nhập — cinemabooking.vn</title>
       </Helmet>
 
       <div className="min-h-[calc(100vh-64px)] lg:grid lg:grid-cols-[1fr_480px]">
@@ -76,10 +184,7 @@ const LoginPage = () => {
 
           {/* Logo */}
           <div className="relative flex items-center gap-3">
-            <span className="grid size-10 place-items-center rounded-xl bg-amber-400 text-slate-950">
-              <Film size={20} strokeWidth={2.5} />
-            </span>
-            <span className="text-lg font-black text-white tracking-tight">CinemaBooking</span>
+            <BrandLogo className="text-2xl" inverted />
           </div>
 
           {/* Hero copy */}
@@ -109,7 +214,7 @@ const LoginPage = () => {
 
           {/* Bottom quote */}
           <p className="relative text-xs font-semibold text-white/30">
-            © {new Date().getFullYear()} CinemaBooking
+            © {new Date().getFullYear()} cinemabooking.vn
           </p>
         </div>
 
@@ -118,10 +223,7 @@ const LoginPage = () => {
           <div className="w-full max-w-sm">
             {/* Mobile logo */}
             <div className="mb-8 flex items-center gap-3 lg:hidden">
-              <span className="grid size-9 place-items-center rounded-xl bg-slate-950 text-amber-300 dark:bg-amber-400 dark:text-slate-950">
-                <Film size={18} />
-              </span>
-              <span className="font-black text-slate-950 dark:text-white">CinemaBooking</span>
+              <BrandLogo className="text-xl" />
             </div>
 
             <div className="mb-7">
@@ -139,6 +241,33 @@ const LoginPage = () => {
                 {errorMsg}
               </div>
             )}
+
+            <div className="mb-5 space-y-4">
+              {googleClientId ? (
+                <div className="relative min-h-11">
+                  <div ref={googleButtonRef} className="flex justify-center" />
+                  {googleLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/70 dark:bg-neutral-950/70">
+                      <Loader2 size={18} className="animate-spin text-slate-500" />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-slate-50 text-sm font-black text-slate-400 dark:border-white/10 dark:bg-neutral-950 dark:text-neutral-600"
+                >
+                  Google login chưa cấu hình
+                </button>
+              )}
+
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                <span className="text-[11px] font-black uppercase tracking-[0.16em] cinema-muted">hoặc</span>
+                <span className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Username */}
@@ -178,7 +307,7 @@ const LoginPage = () => {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || googleLoading}
                 className="btn-primary w-full mt-2"
               >
                 {isSubmitting ? (

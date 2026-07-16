@@ -49,7 +49,7 @@ const ProfilePage = () => {
       const updated = res.data.result;
       if (token) login(token, {
         id: updated.id, username: updated.username,
-        firstName: updated.firstName, lastName: updated.lastName, email: updated.email,
+        firstName: updated.firstName, lastName: updated.lastName, email: updated.email, avatarUrl: updated.avatarUrl,
       }, permissions);
       queryClient.invalidateQueries({ queryKey: ['my-profile'] });
       toast.success('Cập nhật hồ sơ thành công!');
@@ -75,7 +75,7 @@ const ProfilePage = () => {
   return (
     <>
       <Helmet>
-        <title>Hồ sơ cá nhân — CinemaBooking</title>
+        <title>Hồ sơ cá nhân — cinemabooking.vn</title>
       </Helmet>
 
       <div className="page-container-md py-8">
@@ -152,10 +152,18 @@ const ProfilePage = () => {
           <aside className="space-y-4">
             {/* Avatar card */}
             <div className="cinema-card p-5 text-center">
-              {/* Avatar with initials */}
-              <div className="mx-auto grid size-20 place-items-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-400 text-2xl font-black text-slate-950 shadow-lg">
-                {initials}
-              </div>
+              {profile?.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile?.username ?? 'Avatar'}
+                  referrerPolicy="no-referrer"
+                  className="mx-auto size-20 rounded-2xl object-cover shadow-lg ring-1 ring-slate-200 dark:ring-white/10"
+                />
+              ) : (
+                <div className="mx-auto grid size-20 place-items-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-400 text-2xl font-black text-slate-950 shadow-lg">
+                  {initials}
+                </div>
+              )}
               <p className="mt-4 text-lg font-black text-slate-950 dark:text-white">
                 {profile?.firstName || profile?.lastName
                   ? `${profile.lastName ?? ''} ${profile.firstName ?? ''}`.trim()

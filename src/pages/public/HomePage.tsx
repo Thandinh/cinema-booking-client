@@ -22,6 +22,8 @@ import { useDebounce } from '../../hooks/useDebounce';
 
 type TabType = 'NOW_SHOWING' | 'COMING_SOON';
 
+const DEFAULT_CITY = 'TP Hồ Chí Minh';
+
 const tabs: { label: string; value: TabType; icon: typeof Film }[] = [
   { label: 'Đang chiếu', value: 'NOW_SHOWING', icon: TrendingUp },
   { label: 'Sắp chiếu', value: 'COMING_SOON', icon: CalendarDays },
@@ -37,6 +39,8 @@ const groupCinemasByCity = (cinemas: CinemaMapItem[]) =>
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('NOW_SHOWING');
   const [search, setSearch] = useState('');
+  const [selectedCinemaCity, setSelectedCinemaCity] = useState('');
+  const [citySearch, setCitySearch] = useState('');
   const debouncedSearch = useDebounce(search, 250);
 
   const { data, isLoading, isError } = useQuery({
@@ -66,12 +70,31 @@ const HomePage = () => {
   }, [data?.content, debouncedSearch]);
 
   const cinemaGroups = useMemo(() => groupCinemasByCity(cinemas), [cinemas]);
-  const highlightedCinemas = cinemas.slice(0, 6);
+  const cinemaCityOptions = useMemo(
+    () =>
+      Object.keys(cinemaGroups).sort((cityA, cityB) => {
+        if (cityA === DEFAULT_CITY) return -1;
+        if (cityB === DEFAULT_CITY) return 1;
+        return cityA.localeCompare(cityB, 'vi');
+      }),
+    [cinemaGroups]
+  );
+  const activeCinemaCity = cinemaCityOptions.includes(selectedCinemaCity)
+    ? selectedCinemaCity
+    : cinemaCityOptions.includes(DEFAULT_CITY)
+      ? DEFAULT_CITY
+      : cinemaCityOptions[0] ?? '';
+  const filteredCinemaCityOptions = useMemo(() => {
+    const keyword = citySearch.trim().toLowerCase();
+    if (!keyword) return cinemaCityOptions;
+    return cinemaCityOptions.filter(city => city.toLowerCase().includes(keyword));
+  }, [cinemaCityOptions, citySearch]);
+  const highlightedCinemas = cinemaGroups[activeCinemaCity] ?? [];
 
   return (
     <>
       <Helmet>
-        <title>Cinema Booking - Đặt vé xem phim</title>
+        <title>cinemabooking.vn - Đặt vé xem phim</title>
         <meta
           name="description"
           content="Xem lịch chiếu, chọn rạp, chọn ghế và thanh toán vé xem phim online."
@@ -175,9 +198,9 @@ const HomePage = () => {
       <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="cinema-label">Mua vé theo rạp</p>
+            <p className="cinema-label">Đặt vé tại rạp</p>
             <h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950 dark:text-white">
-              Xem lịch chiếu tại rạp gần bạn.
+              Chọn rạp, ngày chiếu và suất chiếu phù hợp với bạn.
             </h2>
           </div>
           <Link to="/cinemas" className="btn-secondary shrink-0">
@@ -187,26 +210,74 @@ const HomePage = () => {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
           <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
-            <p className="text-sm font-black text-slate-950 dark:text-white">Khu vực</p>
-            <div className="mt-3 space-y-2">
-              {Object.entries(cinemaGroups).map(([city, items]) => (
-                <div
-                  key={city}
-                  className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm font-bold dark:bg-neutral-950"
+            <p className="text-sm font-black text-slate-950 dark:text-white">Thành phố</p>
+            <div className="relative mt-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+              <input
+                type="search"
+                value={citySearch}
+                onChange={event => setCitySearch(event.target.value)}
+                placeholder="Tìm thành phố"
+                className="cinema-input h-10 pl-9 pr-9 text-sm"
+              />
+              {citySearch && (
+                <button
+                  type="button"
+                  onClick={() => setCitySearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-neutral-200"
+                  aria-label="Xóa tìm kiếm thành phố"
                 >
-                  <span className="text-slate-700 dark:text-neutral-200">{city}</span>
-                  <span className="text-xs text-slate-500 dark:text-neutral-500">{items.length} rạp</span>
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+              {filteredCinemaCityOptions.map(city => {
+                const items = cinemaGroups[city] ?? [];
+                const active = city === activeCinemaCity;
+                return (
+                  <button
+                    key={city}
+                    type="button"
+                    onClick={() => setSelectedCinemaCity(city)}
+                    className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm font-bold transition-colors ${
+                      active
+                        ? 'bg-slate-950 text-white dark:bg-white dark:text-slate-950'
+                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 dark:bg-neutral-950 dark:text-neutral-200 dark:hover:bg-white/5'
+                    }`}
+                  >
+                    <span>{city}</span>
+                    <span className={`text-xs ${active ? 'text-white/70 dark:text-slate-500' : 'text-slate-500 dark:text-neutral-500'}`}>
+                      {items.length} rạp
+                    </span>
+                  </button>
+                );
+              })}
+              {filteredCinemaCityOptions.length === 0 && (
+                <div className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-sm font-semibold cinema-muted dark:border-white/10">
+                  Không tìm thấy thành phố phù hợp.
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {highlightedCinemas.map(cinema => (
+          <div className="min-w-0">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="line-clamp-1 text-sm font-black text-slate-950 dark:text-white">
+                  Rạp tại {activeCinemaCity || 'khu vực đã chọn'}
+                </p>
+                <p className="mt-1 text-xs font-semibold cinema-muted">{highlightedCinemas.length} rạp đang mở bán</p>
+              </div>
+              <span className="hidden shrink-0 text-xs font-bold cinema-muted sm:inline">Kéo ngang để xem thêm</span>
+            </div>
+
+            <div className="flex gap-3 overflow-x-auto pb-2">
+              {highlightedCinemas.map(cinema => (
               <Link
                 key={cinema.id}
                 to={`/cinemas/${cinema.id}`}
-                className="group rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-white/20 dark:hover:bg-white/5"
+                className="group w-[280px] shrink-0 rounded-lg border border-slate-200 bg-white p-4 transition-colors hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:bg-neutral-900 dark:hover:border-white/20 dark:hover:bg-white/5 sm:w-[320px]"
               >
                 <div className="flex items-start gap-3">
                   <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
@@ -223,13 +294,14 @@ const HomePage = () => {
               </Link>
             ))}
 
-            {highlightedCinemas.length === 0 && (
-              <div className="rounded-lg border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-neutral-900 sm:col-span-2 xl:col-span-3">
+              {highlightedCinemas.length === 0 && (
+              <div className="w-full rounded-lg border border-slate-200 bg-white p-8 text-center dark:border-white/10 dark:bg-neutral-900">
                 <Building2 className="mx-auto mb-3 text-slate-400" size={36} />
                 <p className="font-black text-slate-950 dark:text-white">Chưa có dữ liệu rạp</p>
                 <p className="mt-2 text-sm cinema-muted">Hãy kiểm tra dữ liệu cinema trong mock-data.sql.</p>
               </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
 

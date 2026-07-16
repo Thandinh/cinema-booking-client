@@ -7,6 +7,8 @@ export interface UserInfo {
   firstName?: string;
   lastName?: string;
   email?: string;
+  avatarUrl?: string;
+  emailVerified?: boolean;
 }
 
 interface AuthState {

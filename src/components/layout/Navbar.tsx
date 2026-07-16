@@ -14,8 +14,9 @@ import {
   X,
 } from 'lucide-react';
 import { authApi } from '../../api/authApi';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore, type UserInfo } from '../../stores/authStore';
 import { useTheme } from '../../stores/themeStore';
+import BrandLogo from '../BrandLogo';
 
 const navItems = [
   { to: '/', label: 'Phim', icon: Film },
@@ -37,10 +38,6 @@ const Navbar = () => {
 
   const isAdmin = hasPermission('DASHBOARD_VIEW');
   const isStaff = hasPermission('TICKET_CHECKIN');
-  const initials = user?.firstName
-    ? `${user.firstName.charAt(0)}${user.lastName?.charAt(0) ?? ''}`.toUpperCase()
-    : user?.username?.substring(0, 2).toUpperCase() ?? 'U';
-
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur dark:border-white/10 dark:bg-neutral-950/95">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -50,12 +47,7 @@ const Navbar = () => {
             className="flex shrink-0 items-center gap-2"
             onClick={() => setMobileOpen(false)}
           >
-            <span className="grid size-8 place-items-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
-              <Film size={17} strokeWidth={2.4} />
-            </span>
-            <span className="text-sm font-black tracking-tight text-slate-950 dark:text-white">
-              Cinema Booking
-            </span>
+            <BrandLogo className="text-lg" />
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
@@ -81,9 +73,7 @@ const Navbar = () => {
                     to="/profile"
                     className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-white/5"
                   >
-                    <span className="grid size-6 shrink-0 place-items-center rounded-md bg-slate-900 text-[11px] font-black text-white dark:bg-white dark:text-slate-950">
-                      {initials}
-                    </span>
+                    <UserAvatar user={user} className="size-6 rounded-md text-[11px]" />
                     <span className="max-w-24 truncate">{user.firstName || user.username}</span>
                   </Link>
                   <button
@@ -138,9 +128,7 @@ const Navbar = () => {
                     onClick={() => setMobileOpen(false)}
                     className="flex flex-1 items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 dark:border-white/10 dark:text-neutral-300"
                   >
-                    <span className="grid size-6 place-items-center rounded-md bg-slate-900 text-[11px] font-black text-white dark:bg-white dark:text-slate-950">
-                      {initials}
-                    </span>
+                    <UserAvatar user={user} className="size-6 rounded-md text-[11px]" />
                     Hồ sơ
                   </Link>
                   <button
@@ -173,6 +161,29 @@ const Navbar = () => {
         </div>
       )}
     </header>
+  );
+};
+
+const UserAvatar = ({ user, className }: { user: UserInfo; className: string }) => {
+  const initials = user.firstName
+    ? `${user.firstName.charAt(0)}${user.lastName?.charAt(0) ?? ''}`.toUpperCase()
+    : user.username.substring(0, 2).toUpperCase();
+
+  if (user.avatarUrl) {
+    return (
+      <img
+        src={user.avatarUrl}
+        alt={user.username}
+        referrerPolicy="no-referrer"
+        className={`${className} shrink-0 object-cover ring-1 ring-slate-200 dark:ring-white/10`}
+      />
+    );
+  }
+
+  return (
+    <span className={`grid shrink-0 place-items-center bg-slate-900 font-black text-white dark:bg-white dark:text-slate-950 ${className}`}>
+      {initials}
+    </span>
   );
 };
 

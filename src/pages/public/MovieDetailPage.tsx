@@ -183,7 +183,7 @@ const MovieDetailPage = () => {
   return (
     <>
       <Helmet>
-        <title>{movie.title} - CinemaBooking</title>
+        <title>{movie.title} - cinemabooking.vn</title>
         <meta name="description" content={movie.description?.slice(0, 160)} />
       </Helmet>
 

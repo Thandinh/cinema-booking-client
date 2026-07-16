@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import {
   AlertCircle,
+  Building2,
+  CalendarDays,
   CheckCircle2,
   Clock,
   Loader2,
@@ -17,8 +19,8 @@ import {
 import axiosClient from '../../api/axiosClient';
 import { bookingApi } from '../../api/bookingApi';
 import type { ApiResponse } from '../../types/api.types';
-import type { BookingResponse, HoldSeatResponse, SeatMapItem } from '../../types/domain.types';
-import { formatCountdown, formatMoney } from '../../utils/format';
+import type { BookingResponse, HoldSeatResponse, SeatMapItem, Showtime } from '../../types/domain.types';
+import { formatCountdown, formatDateTime, formatMoney } from '../../utils/format';
 import { HOLD_SECONDS } from '../../constants';
 import { toast } from '../../components/ui/Toast';
 import { useSeatWebSocket, type SeatStatusEvent } from '../../hooks/useSeatWebSocket';
@@ -75,6 +77,16 @@ const SeatSelectionPage = () => {
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
     refetchInterval: 5000,
+  });
+
+  const { data: showtime, isLoading: loadingShowtime } = useQuery({
+    queryKey: ['showtime', showtimeId],
+    queryFn: () =>
+      axiosClient
+        .get<ApiResponse<Showtime>>(`/api/v1/showtimes/${showtimeId}`)
+        .then(response => response.data.result),
+    enabled: Boolean(showtimeId),
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -206,8 +218,10 @@ const SeatSelectionPage = () => {
 
   const activeSeatIds = holdActive ? heldSeats : selected;
   const selectedSeats = seatMap.filter(seat => activeSeatIds.includes(seat.seatId));
+  const selectedSeatCodes = selectedSeats.map(seat => `${seat.rowLabel}${seat.seatNumber}`);
   const totalPrice = selectedSeats.reduce((sum, seat) => sum + seat.price, 0);
   const isSubmitting = holdMutation.isPending || bookingMutation.isPending;
+  const cinemaLocation = [showtime?.cinemaAddress, showtime?.cinemaCity].filter(Boolean).join(', ');
 
   const getSeatStyle = (seat: SeatMapItem): string => {
     if (heldSeats.includes(seat.seatId) || selected.includes(seat.seatId)) {
@@ -257,7 +271,7 @@ const SeatSelectionPage = () => {
   return (
     <>
       <Helmet>
-        <title>Chọn ghế - Cinema Booking</title>
+        <title>Chọn ghế - cinemabooking.vn</title>
       </Helmet>
 
       <div className="page-container py-8">
@@ -293,6 +307,25 @@ const SeatSelectionPage = () => {
                 <span className="tabular-nums">{formatCountdown(timeLeft)}</span>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className="mb-5 rounded-lg border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-neutral-900 lg:hidden">
+          <p className="cinema-label">Thông tin vé</p>
+          <p className="mt-1.5 line-clamp-2 text-sm font-black text-slate-950 dark:text-white">
+            {loadingShowtime ? 'Đang tải...' : showtime?.movieTitle ?? 'Chưa có thông tin phim'}
+          </p>
+          <div className="mt-2 space-y-1.5 text-xs font-semibold cinema-muted">
+            <div className="flex items-center gap-2">
+              <Building2 size={14} />
+              <span className="line-clamp-1">
+                {[showtime?.cinemaName, showtime?.roomName].filter(Boolean).join(' - ') || '--'}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CalendarDays size={14} />
+              <span>{formatDateTime(showtime?.startTime)}</span>
+            </div>
           </div>
         </div>
 
@@ -361,7 +394,43 @@ const SeatSelectionPage = () => {
           </section>
 
           <aside className="h-fit cinema-card p-5 lg:sticky lg:top-24 lg:p-6">
-            <div className="flex items-center gap-3">
+            <div className="hidden rounded-lg border border-slate-100 bg-slate-50 p-3 dark:border-white/8 dark:bg-neutral-950 lg:block">
+              <div className="flex items-center justify-between gap-3">
+                <p className="cinema-label">Thông tin vé</p>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold cinema-muted">
+                  <CalendarDays size={12} />
+                  {formatDateTime(showtime?.startTime)}
+                </span>
+              </div>
+
+              <p className="mt-2 line-clamp-2 text-sm font-black text-slate-950 dark:text-white">
+                {loadingShowtime ? 'Đang tải...' : showtime?.movieTitle ?? 'Chưa có thông tin phim'}
+              </p>
+
+              <div className="mt-3 space-y-2 text-xs">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="shrink-0 font-bold cinema-muted">Rạp</span>
+                  <span className="line-clamp-2 text-right font-black text-slate-800 dark:text-neutral-100">
+                    {showtime?.cinemaName ?? '--'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="shrink-0 font-bold cinema-muted">Phòng</span>
+                  <span className="font-black text-slate-800 dark:text-neutral-100">{showtime?.roomName ?? '--'}</span>
+                </div>
+
+                {cinemaLocation && (
+                  <div className="flex items-start justify-between gap-3 border-t border-slate-200 pt-2 dark:border-white/8">
+                    <span className="shrink-0 font-bold cinema-muted">Địa chỉ</span>
+                    <span className="line-clamp-2 text-right font-semibold leading-5 cinema-muted">
+                      {cinemaLocation}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 lg:mt-5">
               <span className="grid size-10 place-items-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-slate-950">
                 <Ticket size={18} />
               </span>
@@ -376,13 +445,13 @@ const SeatSelectionPage = () => {
             <div className="mt-5 rounded-lg bg-slate-50 p-4 dark:bg-neutral-950">
               <p className="cinema-label">Danh sách ghế</p>
               <div className="mt-3 flex min-h-10 flex-wrap gap-2">
-                {selectedSeats.length > 0 ? (
-                  selectedSeats.map(seat => (
+                {selectedSeatCodes.length > 0 ? (
+                  selectedSeatCodes.map(code => (
                     <span
-                      key={seat.seatId}
+                      key={code}
                       className="inline-flex items-center rounded-md bg-white px-2.5 py-1 text-xs font-black text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-white/10"
                     >
-                      {seat.rowLabel}{seat.seatNumber}
+                      {code}
                     </span>
                   ))
                 ) : (

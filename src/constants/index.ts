@@ -1,9 +1,9 @@
 /** App Data Directory paths */
-export const APP_NAME = 'CinemaBooking';
+export const APP_NAME = 'cinemabooking.vn';
 
 /** Poster mặc định khi không có URL hoặc URL lỗi */
 export const FALLBACK_POSTER =
-  'https://placehold.co/480x720/111827/fbbf24?text=CinemaBooking';
+  'https://placehold.co/480x720/111827/fbbf24?text=cinemabooking.vn';
 
 /** Thời gian giữ ghế (giây) — phải khớp với backend HoldExpireScheduler */
 export const HOLD_SECONDS = 600;

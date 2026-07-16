@@ -11,6 +11,7 @@ type UserItem = {
   firstName?: string;
   lastName?: string;
   email?: string;
+  avatarUrl?: string;
   phone?: string;
   isActive: boolean;
   roles?: string[];
@@ -94,9 +95,18 @@ const AdminUserPage = () => {
                     <tr key={user.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-sm font-black text-white dark:from-neutral-600 dark:to-neutral-800">
-                            {initials}
-                          </span>
+                          {user.avatarUrl ? (
+                            <img
+                              src={user.avatarUrl}
+                              alt={user.username}
+                              referrerPolicy="no-referrer"
+                              className="size-9 shrink-0 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-white/10"
+                            />
+                          ) : (
+                            <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-sm font-black text-white dark:from-neutral-600 dark:to-neutral-800">
+                              {initials}
+                            </span>
+                          )}
                           <div>
                             <p className="font-black text-slate-950 dark:text-white">{fullName}</p>
                             <p className="mt-0.5 text-xs cinema-muted">@{user.username}</p>
