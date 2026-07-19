@@ -3,7 +3,13 @@ import type { ApiResponse, PageResult } from '../types/api.types';
 import type { Movie, Showtime } from '../types/domain.types';
 
 export const movieApi = {
-  getAll: (params?: { status?: string; keyword?: string; page?: number; size?: number }) => {
+  getAll: (params?: {
+    status?: string;
+    sortMode?: 'DEFAULT' | 'POPULAR' | 'RELEASE_DATE_ASC';
+    keyword?: string;
+    page?: number;
+    size?: number;
+  }) => {
     const { keyword: _keyword, ...rest } = params ?? {};
     // Backend dùng Spring Pageable: page, size
     // keyword tìm theo title (nếu backend hỗ trợ) — nếu không, ta filter client-side

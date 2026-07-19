@@ -47,7 +47,11 @@ const HomePage = () => {
     queryKey: ['movies', activeTab],
     queryFn: () =>
       movieApi
-        .getAll({ status: activeTab, size: 100 })
+        .getAll({
+          status: activeTab,
+          sortMode: activeTab === 'NOW_SHOWING' ? 'POPULAR' : 'RELEASE_DATE_ASC',
+          size: 100,
+        })
         .then(response => response.data.result),
     staleTime: 1000 * 60 * 5,
   });
@@ -121,7 +125,7 @@ const HomePage = () => {
               <div className="relative min-w-0 flex-1">
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <input
-                  type="search"
+                  type="text"
                   placeholder="Tìm tên phim, thể loại..."
                   value={search}
                   onChange={event => setSearch(event.target.value)}
@@ -164,10 +168,18 @@ const HomePage = () => {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+            <div className="mt-6 flex snap-x gap-4 overflow-x-auto pb-3 pr-1">
               {isLoading
-                ? Array.from({ length: 10 }).map((_, index) => <MovieCardSkeleton key={index} />)
-                : movies.map(movie => <MovieCard key={movie.id} movie={movie} />)}
+                ? Array.from({ length: 10 }).map((_, index) => (
+                  <div key={index} className="w-[165px] shrink-0 snap-start sm:w-[180px]">
+                    <MovieCardSkeleton />
+                  </div>
+                ))
+                : movies.map(movie => (
+                  <div key={movie.id} className="w-[165px] shrink-0 snap-start sm:w-[180px]">
+                    <MovieCard movie={movie} />
+                  </div>
+                ))}
             </div>
 
             {isError && (
@@ -214,7 +226,7 @@ const HomePage = () => {
             <div className="relative mt-3">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
-                type="search"
+                type="text"
                 value={citySearch}
                 onChange={event => setCitySearch(event.target.value)}
                 placeholder="Tìm thành phố"
