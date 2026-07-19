@@ -23,7 +23,15 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || '';
+    const isAuthAttempt =
+      requestUrl.includes('/auth/token') ||
+      requestUrl.includes('/auth/google') ||
+      requestUrl.includes('/api/v1/users/register') ||
+      requestUrl.includes('/api/v1/users/verify-email') ||
+      requestUrl.includes('/api/v1/users/resend-verification');
+
+    if (error.response?.status === 401 && !isAuthAttempt) {
       useAuthStore.getState().logout();
     }
     return Promise.reject(error);
