@@ -5,6 +5,7 @@ import { Building2, CalendarDays, Loader2, LocateFixed, MapPin, Navigation, Sear
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { cinemaApi, type CinemaMapItem } from '../../api/cinemaApi';
+import { VIETNAM_ISLAND_REFERENCES } from '../../constants/vietnamIslandReferences';
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -17,12 +18,16 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
+const showSelectedMapOverlay = import.meta.env.VITE_ENABLE_CINEMA_MAP_OVERLAY === 'true';
+const showSelectedSidebarActions = import.meta.env.VITE_ENABLE_CINEMA_SIDEBAR_ACTIONS === 'true';
+
 const CinemaMapPage = () => {
   const [searchParams] = useSearchParams();
   const requestedCinemaId = searchParams.get('cinemaId');
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Record<string, L.Marker>>({});
+  const islandLayerRef = useRef<L.LayerGroup | null>(null);
   const [cinemas, setCinemas] = useState<CinemaMapItem[]>([]);
   const [selected, setSelected] = useState<CinemaMapItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,14 +50,63 @@ const CinemaMapPage = () => {
     if (!mapContainerRef.current || mapRef.current) return;
 
     const map = L.map(mapContainerRef.current, { zoomControl: false }).setView([10.776889, 106.700806], 12);
+    const updateIslandMarkerScale = () => {
+      const zoom = map.getZoom();
+      const scale = Math.min(1, Math.max(0.56, 0.56 + (zoom - 4) * 0.075));
+      map.getContainer().style.setProperty('--island-marker-scale', scale.toFixed(2));
+    };
+
     L.control.zoom({ position: 'bottomright' }).addTo(map);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap, © CartoDB',
       maxZoom: 19,
     }).addTo(map);
+
+    const islandLayer = L.layerGroup();
+    VIETNAM_ISLAND_REFERENCES.forEach(island => {
+      const islandIcon = L.divIcon({
+        className: 'vietnam-island-marker',
+        html: `
+          <span class="vietnam-island-pin">
+            <span class="vietnam-island-pin__mark">VN</span>
+            <span class="vietnam-island-pin__text">
+              <strong>${island.shortName}</strong>
+              <small>${island.countryLabel}</small>
+            </span>
+          </span>
+        `,
+        iconSize: [132, 40],
+        iconAnchor: [18, 20],
+      });
+
+      L.marker([island.latitude, island.longitude], { icon: islandIcon })
+        .bindPopup(`
+          <div style="min-width:190px">
+            <div style="font-weight:800;color:#0f172a;font-size:14px">${island.name}</div>
+            <div style="color:#b91c1c;font-weight:800;font-size:12px;margin-top:5px;line-height:1.45">
+              ${island.countryLabel}
+            </div>
+            <div style="color:#475569;font-size:12px;margin-top:5px;line-height:1.45">
+              Tọa độ tham chiếu: ${island.latitude}, ${island.longitude}
+            </div>
+            <div style="color:#64748b;font-size:11px;margin-top:6px;line-height:1.4">
+              ${island.sourceLabel}
+            </div>
+          </div>
+        `)
+        .addTo(islandLayer);
+    });
+    islandLayer.addTo(map);
+    islandLayerRef.current = islandLayer;
+
+    updateIslandMarkerScale();
+    map.on('zoom zoomend', updateIslandMarkerScale);
     mapRef.current = map;
 
     return () => {
+      map.off('zoom zoomend', updateIslandMarkerScale);
+      islandLayerRef.current?.clearLayers();
+      islandLayerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -90,6 +144,14 @@ const CinemaMapPage = () => {
                 <div style="font-weight:800;color:#111827;font-size:14px">${cinema.name}</div>
                 <div style="color:#475569;font-size:12px;margin-top:5px;line-height:1.45">${cinema.address || ''}</div>
                 <div style="color:#475569;font-weight:700;font-size:12px;margin-top:5px">${cinema.city || ''}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
+                  <a href="/cinemas/${cinema.id}" style="border-radius:8px;background:#0f172a;color:#fff;text-align:center;text-decoration:none;font-size:12px;font-weight:800;padding:8px 10px">
+                    Lịch chiếu
+                  </a>
+                  <a href="https://www.google.com/maps/dir/?api=1&destination=${cinema.latitude},${cinema.longitude}" target="_blank" rel="noopener noreferrer" style="border-radius:8px;border:1px solid #cbd5e1;color:#0f172a;text-align:center;text-decoration:none;font-size:12px;font-weight:800;padding:8px 10px">
+                    Chỉ đường
+                  </a>
+                </div>
               </div>
             `);
 
@@ -176,8 +238,8 @@ const CinemaMapPage = () => {
           </button>
         </div>
 
-        <div className="grid min-h-[650px] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-neutral-900 lg:grid-cols-[360px_1fr]">
-          <aside className="flex min-h-[360px] flex-col border-b border-slate-200 dark:border-white/10 lg:border-b-0 lg:border-r">
+        <div className="grid overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-neutral-900 lg:h-[calc(100vh-220px)] lg:min-h-[500px] lg:max-h-[620px] lg:grid-cols-[360px_1fr]">
+          <aside className="flex max-h-[360px] min-h-[280px] flex-col border-b border-slate-200 dark:border-white/10 lg:max-h-none lg:min-h-0 lg:border-b-0 lg:border-r">
             <div className="border-b border-slate-200 p-4 dark:border-white/10">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
@@ -193,7 +255,7 @@ const CinemaMapPage = () => {
               </p>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
               {loading ? (
                 <div className="space-y-3">
                   {[1, 2, 3, 4].map(item => (
@@ -234,21 +296,43 @@ const CinemaMapPage = () => {
                 </div>
               )}
             </div>
-          </aside>
 
-          <div className="relative min-h-[420px]">
-            <div ref={mapContainerRef} className="h-full min-h-[420px] w-full" />
-            {selected && (
-              <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-white/95 p-4 shadow-lg ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/95 dark:ring-white/10 sm:left-auto sm:w-96">
-                <p className="font-black text-slate-950 dark:text-white">{selected.name}</p>
-                <p className="mt-1 text-sm leading-6 cinema-muted">{selected.address}</p>
-                <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                  <Link to={`/cinemas/${selected.id}`} className="btn-primary">
-                    <CalendarDays size={16} />
+            {selected && showSelectedSidebarActions && (
+              <div className="border-t border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
+                <p className="line-clamp-1 text-sm font-black text-slate-950 dark:text-white">{selected.name}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 cinema-muted">{selected.address}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Link to={`/cinemas/${selected.id}`} className="btn-primary h-10 px-3 text-xs">
+                    <CalendarDays size={15} />
                     Lịch chiếu
                   </Link>
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${selected.latitude},${selected.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary h-10 px-3 text-xs"
+                  >
+                    <Navigation size={15} />
+                    Chỉ đường
+                  </a>
+                </div>
+              </div>
+            )}
+          </aside>
+
+          <div className="relative h-[360px] lg:h-full lg:min-h-0">
+            <div ref={mapContainerRef} className="h-full w-full" />
+            {selected && showSelectedMapOverlay && (
+              <div className="absolute bottom-4 left-4 right-4 rounded-lg bg-white/95 p-4 shadow-lg ring-1 ring-slate-200 backdrop-blur dark:bg-neutral-950/95 dark:ring-white/10 sm:left-auto sm:w-96">
+                <p className="font-black text-slate-950 dark:text-white">{selected?.name}</p>
+                <p className="mt-1 text-sm leading-6 cinema-muted">{selected?.address}</p>
+                <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <Link to={`/cinemas/${selected?.id ?? ''}`} className="btn-primary">
+                    <CalendarDays size={16} />
+                    Lịch chiếu
+                  </Link>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${selected?.latitude ?? ''},${selected?.longitude ?? ''}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn-secondary"
