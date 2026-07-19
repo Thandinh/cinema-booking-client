@@ -6,7 +6,15 @@ export const FALLBACK_POSTER =
   'https://placehold.co/480x720/111827/fbbf24?text=cinemabooking.vn';
 
 /** Thời gian giữ ghế (giây) — phải khớp với backend HoldExpireScheduler */
-export const HOLD_SECONDS = 600;
+const configuredHoldMinutes = Number(
+  import.meta.env.VITE_BOOKING_SEAT_HOLD_MINUTES
+    ?? import.meta.env.VITE_BOOKING_PENDING_TIMEOUT_MINUTES
+    ?? 10
+);
+
+export const HOLD_SECONDS = Number.isFinite(configuredHoldMinutes)
+  ? Math.max(1, Math.floor(configuredHoldMinutes * 60))
+  : 600;
 
 /** LocalStorage keys */
 export const LS_KEYS = {

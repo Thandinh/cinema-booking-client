@@ -71,7 +71,7 @@ const RegisterPage = () => {
   const onSubmit = async (data: RegisterForm) => {
     setErrorMsg('');
     try {
-      const { confirmPassword, ...payload } = data;
+      const { confirmPassword: _confirmPassword, ...payload } = data;
       await authApi.register(payload);
       setSuccess(true);
     } catch (err: any) {

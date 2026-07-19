@@ -139,7 +139,12 @@ const AdminCinemaPage = () => {
   });
 
   const handleSubmit = (formData: Partial<Cinema>) => {
-    selectedCinema ? updateMutation.mutate({ id: selectedCinema.id, data: formData }) : createMutation.mutate(formData);
+    if (selectedCinema) {
+      updateMutation.mutate({ id: selectedCinema.id, data: formData });
+      return;
+    }
+
+    createMutation.mutate(formData);
   };
 
   const cinemas: Cinema[] = data?.content ?? [];

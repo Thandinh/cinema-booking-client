@@ -178,6 +178,7 @@ export interface DashboardSummaryResponse {
   totalTickets: number;
   totalShowtimes: number;
   pendingBookings: number;
+  expiredBookings?: number;
   upcomingShowtimes: number;
 }
 
