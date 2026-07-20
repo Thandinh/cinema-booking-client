@@ -155,6 +155,7 @@ export interface UserProfile {
   lastName?: string;
   email?: string;
   avatarUrl?: string;
+  emailVerified?: boolean;
   phone?: string;
   dob?: string;
   isActive: boolean;
@@ -167,6 +168,12 @@ export interface UpdateProfileRequest {
   phone?: string;
   dob?: string;
   avatarUrl?: string;
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 // ── Analytics ─────────────────────────────────────────────────

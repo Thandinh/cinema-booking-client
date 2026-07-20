@@ -32,7 +32,7 @@ const registerSchema = z.object({
 type RegisterForm = z.infer<typeof registerSchema>;
 
 const BENEFITS = [
-  { icon: Ticket,       text: 'Đặt vé và giữ ghế chỉ trong 3 phút' },
+  { icon: Ticket,       text: 'Đặt vé và giữ ghế trong 5 phút' },
   { icon: Star,         text: 'Nhận thông báo khi phim yêu thích mở vé' },
   { icon: CheckCircle2, text: 'Lưu toàn bộ lịch sử đặt vé trong tài khoản' },
 ];

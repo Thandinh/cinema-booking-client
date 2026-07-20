@@ -14,6 +14,8 @@ const CinemaDetailPage     = lazy(() => import('../pages/public/CinemaDetailPage
 const LoginPage            = lazy(() => import('../pages/public/LoginPage'));
 const RegisterPage         = lazy(() => import('../pages/public/RegisterPage'));
 const VerifyEmailPage      = lazy(() => import('../pages/public/VerifyEmailPage'));
+const ForgotPasswordPage   = lazy(() => import('../pages/public/ForgotPasswordPage'));
+const ResetPasswordPage    = lazy(() => import('../pages/public/ResetPasswordPage'));
 const SeatSelectionPage    = lazy(() => import('../pages/user/SeatSelectionPage'));
 const MyBookingsPage       = lazy(() => import('../pages/user/MyBookingsPage'));
 const CheckoutPage         = lazy(() => import('../pages/user/CheckoutPage'));
@@ -23,9 +25,13 @@ const ProfilePage          = lazy(() => import('../pages/user/ProfilePage'));
 const AdminDashboardPage   = lazy(() => import('../pages/admin/AdminDashboardPage'));
 const AdminMoviePage       = lazy(() => import('../pages/admin/AdminMoviePage'));
 const AdminCinemaPage      = lazy(() => import('../pages/admin/AdminCinemaPage'));
+const AdminRoomSeatPage    = lazy(() => import('../pages/admin/AdminRoomSeatPage'));
 const AdminShowtimePage    = lazy(() => import('../pages/admin/AdminShowtimePage'));
 const AdminBookingPage     = lazy(() => import('../pages/admin/AdminBookingPage'));
+const AdminPaymentPage     = lazy(() => import('../pages/admin/AdminPaymentPage'));
 const AdminUserPage        = lazy(() => import('../pages/admin/AdminUserPage'));
+const AdminAuditLogPage    = lazy(() => import('../pages/admin/AdminAuditLogPage'));
+const AdminPromotionPage   = lazy(() => import('../pages/admin/AdminPromotionPage'));
 const StaffTicketScannerPage = lazy(() => import('../pages/staff/StaffTicketScannerPage'));
 
 /* ── Page loader ── */
@@ -61,6 +67,8 @@ const AppRouter = () => (
         <Route path="/login"    element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
       {/* ══ ADMIN / STAFF — sidebar layout ══ */}
@@ -90,6 +98,14 @@ const AppRouter = () => (
           }
         />
         <Route
+          path="/admin/rooms"
+          element={
+            <ProtectedRoute permission="ROOM_CREATE">
+              <AdminRoomSeatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/showtimes"
           element={
             <ProtectedRoute permission="SHOWTIME_CREATE">
@@ -106,10 +122,34 @@ const AppRouter = () => (
           }
         />
         <Route
+          path="/admin/payments"
+          element={
+            <ProtectedRoute permission="PAYMENT_VIEW_ALL">
+              <AdminPaymentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/promotions"
+          element={
+            <ProtectedRoute permission="PROMOTION_CREATE">
+              <AdminPromotionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/users"
           element={
             <ProtectedRoute permission="USER_VIEW">
               <AdminUserPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/audit-logs"
+          element={
+            <ProtectedRoute permission="AUDIT_VIEW">
+              <AdminAuditLogPage />
             </ProtectedRoute>
           }
         />

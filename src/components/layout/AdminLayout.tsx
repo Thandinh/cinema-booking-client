@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
-  BarChart3, Building2, Calendar, Film, LogOut, Moon, QrCode, ReceiptText, Sun, Users,
+  BarChart3, Building2, Calendar, CreditCard, DoorOpen, Film, Gift, LogOut, Moon, QrCode, ReceiptText, ShieldCheck, Sun, Users,
 } from 'lucide-react';
 import { authApi } from '../../api/authApi';
 import { useAuthStore, type UserInfo } from '../../stores/authStore';
@@ -12,9 +12,13 @@ const adminNavItems = [
   { to: '/admin/dashboard', label: 'Tổng quan',      icon: BarChart3,  permission: 'DASHBOARD_VIEW' },
   { to: '/admin/movies',    label: 'Phim chiếu rạp', icon: Film,       permission: 'MOVIE_CREATE' },
   { to: '/admin/cinemas',   label: 'Rạp chiếu',      icon: Building2,  permission: 'CINEMA_CREATE' },
+  { to: '/admin/rooms',     label: 'Phòng & ghế',    icon: DoorOpen,   permission: 'ROOM_CREATE' },
   { to: '/admin/showtimes', label: 'Suất chiếu',     icon: Calendar,   permission: 'SHOWTIME_CREATE' },
   { to: '/admin/bookings',  label: 'Đơn đặt vé',     icon: ReceiptText, permission: 'BOOKING_VIEW_ALL' },
+  { to: '/admin/payments',  label: 'Thanh toán',     icon: CreditCard, permission: 'PAYMENT_VIEW_ALL' },
   { to: '/admin/users',     label: 'Người dùng',     icon: Users,      permission: 'USER_VIEW' },
+  { to: '/admin/promotions', label: 'Khuyến mãi',    icon: Gift,       permission: 'PROMOTION_CREATE' },
+  { to: '/admin/audit-logs', label: 'Nhật ký',       icon: ShieldCheck, permission: 'AUDIT_VIEW' },
 ];
 
 /**

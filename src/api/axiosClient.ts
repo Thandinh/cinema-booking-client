@@ -29,7 +29,9 @@ axiosClient.interceptors.response.use(
       requestUrl.includes('/auth/google') ||
       requestUrl.includes('/api/v1/users/register') ||
       requestUrl.includes('/api/v1/users/verify-email') ||
-      requestUrl.includes('/api/v1/users/resend-verification');
+      requestUrl.includes('/api/v1/users/resend-verification') ||
+      requestUrl.includes('/api/v1/users/forgot-password') ||
+      requestUrl.includes('/api/v1/users/reset-password');
 
     if (error.response?.status === 401 && !isAuthAttempt) {
       useAuthStore.getState().logout();

@@ -9,12 +9,12 @@ export const FALLBACK_POSTER =
 const configuredHoldMinutes = Number(
   import.meta.env.VITE_BOOKING_SEAT_HOLD_MINUTES
     ?? import.meta.env.VITE_BOOKING_PENDING_TIMEOUT_MINUTES
-    ?? 10
+    ?? 5
 );
 
 export const HOLD_SECONDS = Number.isFinite(configuredHoldMinutes)
   ? Math.max(1, Math.floor(configuredHoldMinutes * 60))
-  : 600;
+  : 300;
 
 /** LocalStorage keys */
 export const LS_KEYS = {

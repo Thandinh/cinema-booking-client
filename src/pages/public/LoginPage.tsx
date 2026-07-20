@@ -29,7 +29,7 @@ const loginSchema = z.object({
 type LoginForm = z.infer<typeof loginSchema>;
 
 const FEATURES = [
-  { icon: Ticket,      text: 'Đặt vé và giữ ghế chỉ trong 3 phút' },
+  { icon: Ticket,      text: 'Đặt vé và giữ ghế trong 5 phút' },
   { icon: ShieldCheck, text: 'Vé điện tử bảo mật, dùng mã QR vào rạp' },
   { icon: Film,        text: 'Theo dõi lịch sử và quản lý booking dễ dàng' },
 ];
@@ -289,7 +289,12 @@ const LoginPage = () => {
 
               {/* Password */}
               <div>
-                <label className="cinema-label mb-2 block">Mật khẩu</label>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="cinema-label block">Mật khẩu</label>
+                  <Link to="/forgot-password" className="text-xs font-black text-amber-600 hover:text-amber-500 dark:text-amber-400">
+                    Quên mật khẩu?
+                  </Link>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <input

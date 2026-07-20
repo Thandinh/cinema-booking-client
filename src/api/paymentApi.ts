@@ -5,11 +5,21 @@ import type { ApiResponse, PageResult } from '../types/api.types';
 export interface PaymentResponse {
   id: string;
   bookingId: string;
+  bookingCode?: string;
+  bookingStatus?: string;
+  customerId?: string;
+  customerUsername?: string;
+  customerName?: string;
+  customerEmail?: string;
+  movieTitle?: string;
+  cinemaName?: string;
+  roomName?: string;
+  showtimeStartTime?: string;
   amount: number;
   method: string;
   transactionNo: string;
   status: string;
-  paymentTime: string;
+  paymentTime?: string;
 }
 
 export const paymentApi = {
@@ -25,5 +35,16 @@ export const paymentApi = {
 
   getMyPayments(params?: any) {
     return axiosClient.get<ApiResponse<PageResult<PaymentResponse>>>('/api/v1/payments/my', { params });
+  },
+
+  getAllPayments(params?: {
+    status?: string;
+    method?: string;
+    keyword?: string;
+    page?: number;
+    size?: number;
+    sort?: string;
+  }) {
+    return axiosClient.get<ApiResponse<PageResult<PaymentResponse>>>('/api/v1/payments', { params });
   }
 };

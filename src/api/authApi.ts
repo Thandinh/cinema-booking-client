@@ -12,6 +12,12 @@ export interface RegisterRequest {
 }
 export interface VerifyEmailRequest { token: string; }
 export interface ResendVerificationRequest { email: string; }
+export interface ForgotPasswordRequest { email: string; }
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
 
 export const authApi = {
   login: (data: LoginRequest) =>
@@ -37,6 +43,12 @@ export const authApi = {
 
   resendVerification: (data: ResendVerificationRequest) =>
     axiosClient.post<ApiResponse<void>>('/api/v1/users/resend-verification', data),
+
+  forgotPassword: (data: ForgotPasswordRequest) =>
+    axiosClient.post<ApiResponse<void>>('/api/v1/users/forgot-password', data),
+
+  resetPassword: (data: ResetPasswordRequest) =>
+    axiosClient.post<ApiResponse<void>>('/api/v1/users/reset-password', data),
 };
 
 /** Đọc token từ localStorage */

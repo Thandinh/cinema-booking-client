@@ -5,11 +5,9 @@ import { Helmet } from 'react-helmet-async';
 import {
   AlertCircle,
   ArrowLeft,
-  Banknote,
   CheckCircle2,
   CreditCard,
   Loader2,
-  QrCode,
   ReceiptText,
   ShieldCheck,
   Ticket,
@@ -26,12 +24,11 @@ const PAYMENT_METHODS: {
   value: PaymentMethod;
   label: string;
   helper: string;
-  icon: typeof CreditCard;
   enabled: boolean;
 }[] = [
-  { value: 'VNPAY', label: 'VNPay', helper: 'Chuyển sang cổng thanh toán VNPay', icon: Banknote, enabled: true },
-  { value: 'MOMO', label: 'Ví MoMo', helper: 'Sắp hỗ trợ', icon: QrCode, enabled: false },
-  { value: 'CREDIT_CARD', label: 'Thẻ quốc tế', helper: 'Sắp hỗ trợ', icon: CreditCard, enabled: false },
+  { value: 'VNPAY', label: 'VNPay', helper: 'Chuyển sang cổng thanh toán VNPay', enabled: true },
+  { value: 'MOMO', label: 'Ví MoMo', helper: 'Sắp hỗ trợ', enabled: false },
+  { value: 'CREDIT_CARD', label: 'Thẻ quốc tế', helper: 'Sắp hỗ trợ', enabled: false },
 ];
 
 const CheckoutPage = () => {
@@ -88,8 +85,8 @@ const CheckoutPage = () => {
       }
       navigate(`/payment/result?bookingId=${bookingId}&status=PENDING`, { replace: true });
     },
-    onError: () => {
-      navigate(`/payment/result?bookingId=${bookingId}&status=FAILED`, { replace: true });
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Không thể khởi tạo thanh toán. Vui lòng thử lại.');
     },
   });
 
@@ -183,7 +180,6 @@ const CheckoutPage = () => {
               <h2 className="text-lg font-black text-slate-950 dark:text-white">Phương thức thanh toán</h2>
               <div className="mt-4 grid gap-3">
                 {PAYMENT_METHODS.map(item => {
-                  const Icon = item.icon;
                   const active = method === item.value;
                   return (
                     <button
@@ -201,10 +197,10 @@ const CheckoutPage = () => {
                     >
                       <span className={`grid size-11 shrink-0 place-items-center rounded-lg transition-colors ${
                         active
-                          ? 'bg-amber-400 text-slate-950'
+                          ? 'bg-white text-slate-950 ring-1 ring-amber-200 dark:bg-white'
                           : 'bg-white text-slate-500 dark:bg-neutral-900 dark:text-neutral-400'
                       }`}>
-                        <Icon size={20} />
+                        <PaymentMethodLogo method={item.value} />
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block font-black text-slate-950 dark:text-white">{item.label}</span>
@@ -277,7 +273,7 @@ const CheckoutPage = () => {
               className="btn-primary mt-6 w-full"
             >
               {paymentMutation.isPending ? <Loader2 size={16} className="animate-spin" /> : <CreditCard size={16} />}
-              {booking.status === 'SUCCESS' ? 'Đã thanh toán' : 'Thanh toán VNPay'}
+              {booking.status === 'SUCCESS' ? 'Đã thanh toán' : `Thanh toán ${method === 'MOMO' ? 'MoMo' : 'VNPay'}`}
             </button>
 
             {booking.status === 'PENDING' && (
@@ -306,6 +302,27 @@ const formatCountdown = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
   const seconds = (totalSeconds % 60).toString().padStart(2, '0');
   return `${minutes}:${seconds}`;
+};
+
+const PaymentMethodLogo = ({ method }: { method: PaymentMethod }) => {
+  if (method === 'VNPAY') {
+    return (
+      <span className="inline-flex h-7 w-9 items-center justify-center rounded-md bg-white text-[10px] font-black leading-none shadow-sm ring-1 ring-slate-200">
+        <span className="text-[#005baa]">VN</span>
+        <span className="text-[#e31e24]">Pay</span>
+      </span>
+    );
+  }
+
+  if (method === 'MOMO') {
+    return (
+      <span className="inline-flex size-8 items-center justify-center rounded-md bg-[#a50064] text-[8px] font-black leading-none text-white shadow-sm">
+        MoMo
+      </span>
+    );
+  }
+
+  return <CreditCard size={20} />;
 };
 
 const InfoBlock = ({ label, value }: { label: string; value: string }) => (
