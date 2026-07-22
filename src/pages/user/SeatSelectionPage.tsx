@@ -22,7 +22,7 @@ import type { ApiResponse } from '../../types/api.types';
 import type { BookingResponse, HoldSeatResponse, SeatMapItem, Showtime } from '../../types/domain.types';
 import { formatCountdown, formatDateTime, formatMoney } from '../../utils/format';
 import { HOLD_SECONDS } from '../../constants';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 import { useSeatWebSocket, type SeatStatusEvent } from '../../hooks/useSeatWebSocket';
 import { useAuthStore } from '../../stores/authStore';
 

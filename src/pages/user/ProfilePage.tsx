@@ -24,7 +24,7 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { userApi } from '../../api/userApi';
 import { useAuthStore } from '../../stores/authStore';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 
 const phoneRegex = /^(\+84|0)[3-9][0-9]{8}$/;
 const strongPasswordRegex = /^(?=\S+$)(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).+$/;

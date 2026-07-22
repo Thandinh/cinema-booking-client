@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import { Ban, CheckCircle2, Loader2, Search, Shield } from 'lucide-react';
 import { userApi } from '../../api/userApi';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 
 type UserItem = {
   id: string;

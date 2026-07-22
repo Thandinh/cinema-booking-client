@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { bookingApi } from '../../api/bookingApi';
 import { paymentApi } from '../../api/paymentApi';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 import { formatDateTime, formatMoney } from '../../utils/format';
 
 type PaymentMethod = 'VNPAY' | 'MOMO' | 'CREDIT_CARD';

@@ -1,42 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AlertCircle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
+import { subscribeToasts, type ToastPayload } from './toastBus';
 
 // ──────────────────────────────────────────────────────────
 // Types
 // ──────────────────────────────────────────────────────────
-type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-interface ToastItem {
+interface ToastItem extends ToastPayload {
   id: number;
-  type: ToastType;
-  message: string;
 }
-
-// ──────────────────────────────────────────────────────────
-// Simple event-bus (không cần Redux / Context)
-// ──────────────────────────────────────────────────────────
-type Listener = (toast: Omit<ToastItem, 'id'>) => void;
-const listeners: Listener[] = [];
-
-const emit = (toast: Omit<ToastItem, 'id'>) =>
-  listeners.forEach((fn) => fn(toast));
-
-// ──────────────────────────────────────────────────────────
-// Public API — dùng ở bất kỳ đâu trong app
-// ──────────────────────────────────────────────────────────
-export const toast = {
-  success: (message: string) => emit({ type: 'success', message }),
-  error:   (message: string) => emit({ type: 'error',   message }),
-  warning: (message: string) => emit({ type: 'warning', message }),
-  info:    (message: string) => emit({ type: 'info',    message }),
-};
 
 // ──────────────────────────────────────────────────────────
 // Config
 // ──────────────────────────────────────────────────────────
 const TOAST_CONFIG: Record<
-  ToastType,
+  ToastPayload['type'],
   { icon: typeof CheckCircle2; className: string }
 > = {
   success: {
@@ -72,18 +50,13 @@ export function ToastContainer() {
   const timers = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
-    const handler: Listener = (t) => {
+    return subscribeToasts((t) => {
       const id = ++nextId;
       setToasts((prev) => [...prev, { ...t, id }]);
 
       const timer = setTimeout(() => dismiss(id), AUTO_DISMISS_MS);
       timers.current.set(id, timer);
-    };
-    listeners.push(handler);
-    return () => {
-      const idx = listeners.indexOf(handler);
-      if (idx !== -1) listeners.splice(idx, 1);
-    };
+    });
   }, []);
 
   const dismiss = (id: number) => {

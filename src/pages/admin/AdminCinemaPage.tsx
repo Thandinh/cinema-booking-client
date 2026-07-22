@@ -7,7 +7,7 @@ import * as z from 'zod';
 import { Building2, Edit2, Loader2, MapPin, Plus, Search, Trash2, X } from 'lucide-react';
 import { cinemaApi } from '../../api/cinemaApi';
 import type { Cinema } from '../../types/domain.types';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 
 // ─── Schema ──────────────────────────────────────────────
 const cinemaSchema = z.object({

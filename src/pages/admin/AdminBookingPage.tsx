@@ -6,7 +6,7 @@ import {
   ReceiptText, Search, Ticket, User, XCircle,
 } from 'lucide-react';
 import { bookingApi } from '../../api/bookingApi';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 import { useAuthStore } from '../../stores/authStore';
 import type { BookingResponse } from '../../types/domain.types';
 import { formatDateTime, formatMoney } from '../../utils/format';

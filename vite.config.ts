@@ -1,4 +1,5 @@
-import { defineConfig, loadEnv } from 'vite'
+import { loadEnv } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
@@ -15,6 +16,14 @@ export default defineConfig(({ mode }) => {
       tailwindcss(),
       react(),
     ],
+    test: {
+      include: ['src/**/*.test.{ts,tsx}'],
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.ts',
+      css: true,
+      restoreMocks: true,
+      clearMocks: true,
+    },
     server: {
       host: env.DEV_SERVER_HOST || 'localhost',
       port: Number(env.DEV_SERVER_PORT || 5173),

@@ -1,32 +1,63 @@
-# React + TypeScript + Vite
+# cinemabooking.vn Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Frontend React + TypeScript + Vite cho h? th?ng ??t v? xem phim cinemabooking.vn.
 
-Currently, two official plugins are available:
+## Y?u c?u
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Node.js 22+
+- Backend Spring Boot ch?y t?i `http://localhost:8080` khi c?n d? li?u th?t
 
-## React Compiler
+## C?u h?nh m?i tr??ng
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+T?o file `.env` t? `.env.example` v? ch?nh c?c gi? tr? c?n thi?t:
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```env
+BACKEND_PROXY_TARGET=http://localhost:8080
+DEV_SERVER_HOST=localhost
+DEV_SERVER_PORT=5173
+VITE_API_BASE_URL=
+VITE_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+VITE_BOOKING_SEAT_HOLD_MINUTES=2
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Khi ch?y local, n?n ?? `VITE_API_BASE_URL` r?ng ?? request ?i qua Vite proxy. Khi deploy t?ch frontend/backend, ??t `VITE_API_BASE_URL` v? URL backend public.
+
+## Ch?y development
+
+```powershell
+npm install
+npm run dev
+```
+
+M? `http://localhost:5173`.
+
+## Ki?m tra ch?t l??ng
+
+```powershell
+npm run lint
+npm test
+npm run build
+```
+
+Ho?c ch?y to?n b?:
+
+```powershell
+npm run check
+```
+
+## Test
+
+- `npm test`: ch?y Vitest unit/UI tests.
+- `npm run test:watch`: ch?y test ? ch? ?? watch khi ?ang ph?t tri?n.
+
+## Build production
+
+```powershell
+npm run build
+npm run preview
+```
+
+## Ghi ch?
+
+- Kh?ng commit `.env`, `dist/`, `node_modules/`, log file ho?c report test.
+- N?u d?ng ngrok/mobile demo, c?p nh?t `DEV_SERVER_HOST=0.0.0.0` v? `DEV_ALLOWED_HOSTS=<domain-ngrok>` trong `.env`.

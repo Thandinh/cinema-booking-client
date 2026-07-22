@@ -10,7 +10,7 @@ import { movieApi } from '../../api/movieApi';
 import { cinemaApi } from '../../api/cinemaApi';
 import type { ApiResponse, PageResult } from '../../types/api.types';
 import type { Showtime, Movie } from '../../types/domain.types';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 import { formatDateTime, formatMoney, formatTime } from '../../utils/format';
 
 // ─── API ──────────────────────────────────────────────────

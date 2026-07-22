@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { Edit2, Film, Loader2, Plus, Search, Trash2 } from 'lucide-react';
 import { movieApi } from '../../api/movieApi';
 import type { Movie } from '../../types/domain.types';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 import { formatDate } from '../../utils/format';
 import MovieFormModal from './MovieFormModal';
 

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { cinemaApi } from '../../api/cinemaApi';
 import { roomSeatApi, type RoomResponse, type SeatLayoutTemplate, type SeatResponse, type SeatType } from '../../api/roomSeatApi';
-import { toast } from '../../components/ui/Toast';
+import { toast } from '../../components/ui/toastBus';
 
 type RoomModalState = {
   open: boolean;

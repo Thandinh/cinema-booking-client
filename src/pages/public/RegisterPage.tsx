@@ -41,14 +41,14 @@ const getRegisterErrorMessage = (err: any) => {
   const code = err.response?.data?.code;
   const message = String(err.response?.data?.message || '').toLowerCase();
 
+  if (message.includes('username') && message.includes('email') && message.includes('exists')) {
+    return 'Tên đăng nhập và email đã tồn tại. Vui lòng kiểm tra lại.';
+  }
   if (code === 1002 || message.includes('username already exists')) {
     return 'Tên đăng nhập đã tồn tại. Vui lòng chọn tên khác.';
   }
   if (code === 1003 || message.includes('email already exists')) {
     return 'Email đã được sử dụng. Vui lòng dùng email khác hoặc đăng nhập.';
-  }
-  if (message.includes('username') && message.includes('email') && message.includes('exists')) {
-    return 'Tên đăng nhập và email đã tồn tại. Vui lòng kiểm tra lại.';
   }
   if (code === 1011 || message.includes('password must')) {
     return 'Mật khẩu cần 8-72 ký tự, gồm chữ hoa, chữ thường, số, ký tự đặc biệt và không chứa khoảng trắng.';
