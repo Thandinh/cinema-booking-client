@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-// Use relative URLs - Vite proxy will forward to backend:8080
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '').trim();
+
 const axiosClient = axios.create({
-  baseURL: '',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
   },

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Helmet } from 'react-helmet-async';
 import {
   AlertCircle,
@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   CreditCard,
   Loader2,
+  Percent,
   ReceiptText,
   ShieldCheck,
   Ticket,
@@ -34,8 +35,10 @@ const PAYMENT_METHODS: {
 const CheckoutPage = () => {
   const { bookingId } = useParams<{ bookingId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [method, setMethod] = useState<PaymentMethod>('VNPAY');
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [promotionCode, setPromotionCode] = useState('');
 
   const { data: booking, isLoading, isError } = useQuery({
     queryKey: ['booking', bookingId],
@@ -48,6 +51,10 @@ const CheckoutPage = () => {
     if (seats.length === 0) return 'Chưa có thông tin ghế';
     return seats.map(seat => `${seat.rowLabel}${seat.seatNumber}`).join(', ');
   }, [booking]);
+
+  useEffect(() => {
+    setPromotionCode(booking?.promotionCode ?? '');
+  }, [booking?.promotionCode]);
 
   useEffect(() => {
     if (!booking?.paymentExpiresAt || booking.status !== 'PENDING') {
@@ -74,6 +81,7 @@ const CheckoutPage = () => {
 
   const paymentExpired = booking?.status === 'EXPIRED' || remainingSeconds === 0;
   const canPay = Boolean(booking && booking.status === 'PENDING' && booking.totalPrice > 0 && !paymentExpired);
+  const canEditPromotion = Boolean(booking && booking.status === 'PENDING' && !paymentExpired);
 
   const paymentMutation = useMutation({
     mutationFn: () => paymentApi.initiatePayment(bookingId!, method, booking?.totalPrice ?? 0),
@@ -87,6 +95,29 @@ const CheckoutPage = () => {
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Không thể khởi tạo thanh toán. Vui lòng thử lại.');
+    },
+  });
+
+  const applyPromotionMutation = useMutation({
+    mutationFn: () => bookingApi.applyPromotion(bookingId!, promotionCode.trim()),
+    onSuccess: response => {
+      toast.success(`Đã áp dụng mã ${response.data.result.promotionCode}`);
+      queryClient.setQueryData(['booking', bookingId], response.data.result);
+    },
+    onError: (error: any) => {
+      toast.error(resolvePromotionError(error?.response?.data?.message));
+    },
+  });
+
+  const removePromotionMutation = useMutation({
+    mutationFn: () => bookingApi.removePromotion(bookingId!),
+    onSuccess: response => {
+      toast.success('Đã gỡ mã giảm giá');
+      setPromotionCode('');
+      queryClient.setQueryData(['booking', bookingId], response.data.result);
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Không thể gỡ mã giảm giá. Vui lòng thử lại.');
     },
   });
 
@@ -230,6 +261,58 @@ const CheckoutPage = () => {
               </div>
             </div>
 
+            <form
+              className="mt-5 rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-neutral-950 dark:ring-white/10"
+              onSubmit={(event) => {
+                event.preventDefault();
+                const code = promotionCode.trim();
+                if (!code) {
+                  toast.error('Vui lòng nhập mã giảm giá.');
+                  return;
+                }
+                applyPromotionMutation.mutate();
+              }}
+            >
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em] text-slate-500">
+                  <Percent size={14} />
+                  Mã giảm giá
+                </span>
+                {booking.promotionCode && (
+                  <button
+                    type="button"
+                    disabled={!canEditPromotion || removePromotionMutation.isPending}
+                    onClick={() => removePromotionMutation.mutate()}
+                    className="text-xs font-black text-red-600 hover:text-red-700 disabled:opacity-50 dark:text-red-400"
+                  >
+                    Gỡ mã
+                  </button>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  value={promotionCode}
+                  onChange={(event) => setPromotionCode(event.target.value.toUpperCase())}
+                  disabled={!canEditPromotion || applyPromotionMutation.isPending || removePromotionMutation.isPending}
+                  className="cinema-input h-10 flex-1 bg-white text-sm font-black uppercase tracking-wide disabled:opacity-60 dark:bg-neutral-900"
+                  placeholder="WELCOME10"
+                  autoComplete="off"
+                />
+                <button
+                  type="submit"
+                  disabled={!canEditPromotion || applyPromotionMutation.isPending || !promotionCode.trim()}
+                  className="btn-secondary h-10 px-3 text-xs disabled:opacity-50"
+                >
+                  {applyPromotionMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : 'Áp dụng'}
+                </button>
+              </div>
+              {booking.promotionCode && (
+                <p className="mt-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                  Đang áp dụng mã {booking.promotionCode}
+                </p>
+              )}
+            </form>
+
             <div className="mt-5 space-y-3 text-sm font-semibold">
               <div className="flex items-center justify-between gap-4 cinema-muted">
                 <span>Tạm tính</span>
@@ -302,6 +385,27 @@ const formatCountdown = (totalSeconds: number) => {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
   const seconds = (totalSeconds % 60).toString().padStart(2, '0');
   return `${minutes}:${seconds}`;
+};
+
+const resolvePromotionError = (message?: string) => {
+  switch (message) {
+    case 'Promotion not found':
+      return 'Mã giảm giá không tồn tại.';
+    case 'Promotion is not active':
+      return 'Mã giảm giá đang bị tắt.';
+    case 'Promotion has expired':
+      return 'Mã giảm giá đã hết hạn hoặc chưa đến thời gian áp dụng.';
+    case 'Promotion usage limit reached':
+      return 'Mã giảm giá đã hết lượt sử dụng.';
+    case 'Order value does not meet minimum requirement':
+      return 'Đơn hàng chưa đủ điều kiện áp dụng mã này.';
+    case 'Booking payment window has expired':
+      return 'Đơn giữ ghế đã hết hạn. Vui lòng chọn ghế lại.';
+    case 'Booking has already been processed':
+      return 'Chỉ có thể áp mã cho đơn đang chờ thanh toán.';
+    default:
+      return message || 'Không thể áp dụng mã giảm giá. Vui lòng thử lại.';
+  }
 };
 
 const PaymentMethodLogo = ({ method }: { method: PaymentMethod }) => {

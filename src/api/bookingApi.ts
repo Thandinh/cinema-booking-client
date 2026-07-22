@@ -35,5 +35,13 @@ export const bookingApi = {
 
   cancelBooking(id: string) {
     return axiosClient.patch<ApiResponse<BookingResponse>>(`/api/v1/bookings/${id}/cancel`);
+  },
+
+  applyPromotion(id: string, promotionCode: string) {
+    return axiosClient.patch<ApiResponse<BookingResponse>>(`/api/v1/bookings/${id}/promotion`, { promotionCode });
+  },
+
+  removePromotion(id: string) {
+    return axiosClient.delete<ApiResponse<BookingResponse>>(`/api/v1/bookings/${id}/promotion`);
   }
 };

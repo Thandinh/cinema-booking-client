@@ -137,6 +137,10 @@ export interface TicketResponse {
   qrImage?: string;
   status: TicketStatus;
   checkInTime?: string;
+  checkedInById?: string;
+  checkedInByUsername?: string;
+  checkedInByName?: string;
+  alreadyCheckedIn?: boolean;
   createdAt: string;
   bookingDetailId: string;
   movieTitle?: string;
