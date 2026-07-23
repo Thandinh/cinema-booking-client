@@ -7,11 +7,12 @@ import {
 } from 'recharts';
 import {
   BarChart3, CalendarDays, Clapperboard, DollarSign,
-  Loader2, Ticket, TrendingUp, Users, AlertCircle
+  Loader2, Ticket, TrendingUp, Users, AlertCircle, Download
 } from 'lucide-react';
 import { analyticsApi } from '../../api/analyticsApi';
 import { useAuthStore } from '../../stores/authStore';
 import { formatMoney } from '../../utils/format';
+import { toast } from '../../components/ui/toastBus';
 
 type ChartPoint = {
   period: string;
@@ -38,6 +39,41 @@ const formatChartLabel = (period: string, mode: 'daily' | 'monthly') => {
     : date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
 };
 
+
+const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
+
+const getReportRange = (mode: 'daily' | 'monthly') => {
+  const today = new Date();
+  const from = new Date(today);
+
+  if (mode === 'monthly') {
+    from.setMonth(today.getMonth() - 11, 1);
+  } else {
+    from.setDate(today.getDate() - 29);
+  }
+
+  return { from: toIsoDate(from), to: toIsoDate(today) };
+};
+
+const getFilenameFromDisposition = (disposition?: string): string | null => {
+  if (!disposition) return null;
+  const utf8Match = /filename\*=UTF-8''([^;]+)/i.exec(disposition);
+  if (utf8Match?.[1]) return decodeURIComponent(utf8Match[1].replace(/["']/g, ''));
+  const match = /filename="?([^";]+)"?/i.exec(disposition);
+  return match?.[1] ?? null;
+};
+
+const saveBlob = (blob: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 const buildEmptyChartData = (mode: 'daily' | 'monthly'): ChartPoint[] => {
   const today = new Date();
 
@@ -60,6 +96,7 @@ const buildEmptyChartData = (mode: 'daily' | 'monthly'): ChartPoint[] => {
 const AdminDashboardPage = () => {
   const { user } = useAuthStore();
   const [period, setPeriod] = useState<'daily' | 'monthly'>('daily');
+  const [isExporting, setIsExporting] = useState(false);
 
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ['analytics-summary'],
@@ -106,6 +143,23 @@ const AdminDashboardPage = () => {
     totalBookings: toNumber(movie.totalBookings),
   })), [topMovies]);
 
+  const reportRange = useMemo(() => getReportRange(period), [period]);
+
+  const handleExportRevenue = async () => {
+    try {
+      setIsExporting(true);
+      const response = await analyticsApi.exportRevenueCsv(reportRange);
+      const filename = getFilenameFromDisposition(response.headers['content-disposition'])
+        ?? `revenue-report-${reportRange.from}_${reportRange.to}.csv`;
+      saveBlob(response.data, filename);
+      toast.success('\u0110\u00e3 t\u1ea3i b\u00e1o c\u00e1o doanh thu');
+    } catch {
+      toast.error('Kh\u00f4ng th\u1ec3 t\u1ea3i b\u00e1o c\u00e1o doanh thu. Vui l\u00f2ng th\u1eed l\u1ea1i.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (loadingSummary || loadingRevenue || loadingTopMovies) {
     return (
       <div className="flex min-h-[420px] items-center justify-center">
@@ -141,17 +195,29 @@ const AdminDashboardPage = () => {
       </Helmet>
 
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-amber-800 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20">
-            <BarChart3 size={14} />
+        <div className="mb-8 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-amber-800 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20">
+              <BarChart3 size={14} />
             Tổng quan
           </div>
-          <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">
+            <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">
             Chào mừng trở lại, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-400">{user?.firstName || user?.username || 'Admin'}</span>! 👋
-          </h1>
-          <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-neutral-400">
+            </h1>
+            <p className="mt-2 text-sm font-semibold text-slate-500 dark:text-neutral-400">
             Dưới đây là tổng quan hiệu suất hệ thống cinemabooking.vn của bạn hôm nay.
-          </p>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleExportRevenue}
+            disabled={isExporting}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-neutral-200"
+          >
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            {'Xu\u1ea5t CSV'}
+          </button>
         </div>
 
         {/* KPIs */}

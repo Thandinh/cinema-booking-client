@@ -30,4 +30,10 @@ export const analyticsApi = {
     axiosClient.get<ApiResponse<PageResult<ShowtimeStatsResponse>>>('/api/v1/analytics/showtimes', {
       params,
     }),
+
+  exportRevenueCsv: (params?: { from?: string; to?: string; cinemaId?: string; movieId?: string }) =>
+    axiosClient.get<Blob>('/api/v1/analytics/revenue/export', {
+      params,
+      responseType: 'blob',
+    }),
 };
