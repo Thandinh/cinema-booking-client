@@ -19,17 +19,37 @@ export interface ResetPasswordRequest {
   confirmPassword: string;
 }
 
+export interface AuthenticationResult {
+  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  tokenType?: string;
+  expiresIn?: number;
+  refreshExpiresIn?: number;
+  authenticated: boolean;
+}
+
+export const getAccessToken = (result?: AuthenticationResult | null): string =>
+  result?.accessToken || result?.token || '';
+
 export const authApi = {
   login: (data: LoginRequest) =>
-    axiosClient.post<ApiResponse<{ token: string; authenticated: boolean }>>('/auth/token', data),
+    axiosClient.post<ApiResponse<AuthenticationResult>>('/auth/token', data),
 
   googleLogin: (data: GoogleLoginRequest) =>
-    axiosClient.post<ApiResponse<{ token: string; authenticated: boolean }>>('/auth/google', data),
+    axiosClient.post<ApiResponse<AuthenticationResult>>('/auth/google', data),
 
-  logout: (token: string) =>
-    axiosClient.post<ApiResponse<void>>('/auth/logout', { token }),
+  refresh: (refreshToken?: string | null) =>
+    axiosClient.post<ApiResponse<AuthenticationResult>>(
+      '/auth/refresh',
+      refreshToken ? { token: refreshToken } : {},
+      { withCredentials: true }
+    ),
 
-  /** Lấy thông tin tài khoản đang đăng nhập */
+  logout: (token?: string | null, refreshToken?: string | null) =>
+    axiosClient.post<ApiResponse<void>>('/auth/logout', { token, refreshToken }, { withCredentials: true }),
+
+  /** Láº¥y thÃ´ng tin tÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p */
   getMyProfile: (token?: string) =>
     axiosClient.get<ApiResponse<UserInfo & { email?: string; phone?: string }>>('/api/v1/users/me', {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -51,6 +71,9 @@ export const authApi = {
     axiosClient.post<ApiResponse<void>>('/api/v1/users/reset-password', data),
 };
 
-/** Đọc token từ localStorage */
+/** Äá»c token tá»« localStorage */
 export const getStoredToken = (): string | null =>
   localStorage.getItem(LS_KEYS.ACCESS_TOKEN);
+
+export const getStoredRefreshToken = (): string | null =>
+  localStorage.getItem(LS_KEYS.REFRESH_TOKEN);

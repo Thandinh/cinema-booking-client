@@ -24,13 +24,13 @@ const navItems = [
 ];
 
 const Navbar = () => {
-  const { user, token, logout, hasPermission } = useAuthStore();
+  const { user, token, refreshToken, logout, hasPermission } = useAuthStore();
   const { theme, toggleTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
-      if (token) await authApi.logout(token);
+      if (token || refreshToken) await authApi.logout(token, refreshToken);
     } finally {
       logout();
     }

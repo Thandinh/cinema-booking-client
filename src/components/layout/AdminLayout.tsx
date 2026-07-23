@@ -26,11 +26,11 @@ const adminNavItems = [
  * Sidebar trên desktop, top-bar trên mobile.
  */
 const AdminLayout = () => {
-  const { user, token, logout, hasPermission } = useAuthStore();
+  const { user, token, refreshToken, logout, hasPermission } = useAuthStore();
   const { theme, toggleTheme } = useTheme();
 
   const handleLogout = async () => {
-    try { if (token) await authApi.logout(token); } catch { /**/ }
+    try { if (token || refreshToken) await authApi.logout(token, refreshToken); } catch { /**/ }
     finally { logout(); }
   };
 

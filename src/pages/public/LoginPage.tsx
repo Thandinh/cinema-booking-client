@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Film, Lock, LogIn, Loader2, ShieldCheck, Ticket, User } from 'lucide-react';
 import * as z from 'zod';
-import { authApi } from '../../api/authApi';
+import { authApi, getAccessToken } from '../../api/authApi';
 import { useAuthStore } from '../../stores/authStore';
 import BrandLogo from '../../components/BrandLogo';
 
@@ -52,7 +52,9 @@ const LoginPage = () => {
     setErrorMsg('');
     try {
       const res = await authApi.login(data);
-      const token = res.data.result.token;
+      const authResult = res.data.result;
+      const token = getAccessToken(authResult);
+      if (!token) throw new Error('Missing access token');
 
       const profileRes = await authApi.getMyProfile(token);
       const user = profileRes.data.result;
@@ -72,7 +74,7 @@ const LoginPage = () => {
         email: user.email,
         avatarUrl: user.avatarUrl,
         emailVerified: user.emailVerified,
-      }, Array.from(allPermissions));
+      }, Array.from(allPermissions), authResult.refreshToken);
 
       navigate(from, { replace: true });
     } catch (err: any) {
@@ -86,7 +88,7 @@ const LoginPage = () => {
     }
   };
 
-  const completeGoogleLogin = useCallback(async (token: string) => {
+  const completeGoogleLogin = useCallback(async (token: string, refreshToken?: string | null) => {
     const profileRes = await authApi.getMyProfile(token);
     const user = profileRes.data.result;
 
@@ -105,7 +107,7 @@ const LoginPage = () => {
       email: user.email,
       avatarUrl: user.avatarUrl,
       emailVerified: user.emailVerified,
-    }, Array.from(allPermissions));
+    }, Array.from(allPermissions), refreshToken);
 
     navigate(from, { replace: true });
   }, [from, login, navigate]);
@@ -120,7 +122,10 @@ const LoginPage = () => {
     setGoogleLoading(true);
     try {
       const res = await authApi.googleLogin({ idToken });
-      await completeGoogleLogin(res.data.result.token);
+      const authResult = res.data.result;
+      const token = getAccessToken(authResult);
+      if (!token) throw new Error('Missing access token');
+      await completeGoogleLogin(token, authResult.refreshToken);
     } catch (err: any) {
       setErrorMsg(err.response?.data?.message || 'Đăng nhập Google thất bại. Vui lòng thử lại.');
     } finally {
