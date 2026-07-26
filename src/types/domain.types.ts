@@ -1,4 +1,4 @@
-export type MovieStatus = 'NOW_SHOWING' | 'COMING_SOON' | 'ENDED';
+﻿export type MovieStatus = 'NOW_SHOWING' | 'COMING_SOON' | 'ENDED';
 
 export interface Movie {
   id: string;
@@ -128,7 +128,7 @@ export interface PaymentInitiateRequest {
   amount: number;
 }
 
-// ── Ticket ────────────────────────────────────────────────────
+// â”€â”€ Ticket â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export type TicketStatus = 'ACTIVE' | 'USED' | 'CANCELLED';
 
 export interface TicketResponse {
@@ -151,7 +151,7 @@ export interface TicketResponse {
   seatNumber?: number;
 }
 
-// ── User Profile ───────────────────────────────────────────────
+// â”€â”€ User Profile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export interface UserProfile {
   id: string;
   username: string;
@@ -163,7 +163,8 @@ export interface UserProfile {
   phone?: string;
   dob?: string;
   isActive: boolean;
-  roles?: string[];
+  roles?: Array<string | { id?: string; name: string }>;
+  assignedCinemas?: Cinema[];
 }
 
 export interface UpdateProfileRequest {
@@ -180,7 +181,7 @@ export interface ChangePasswordRequest {
   confirmPassword: string;
 }
 
-// ── Analytics ─────────────────────────────────────────────────
+// â”€â”€ Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export interface DashboardSummaryResponse {
   totalRevenue: number;
   totalBookings: number;
@@ -223,3 +224,5 @@ export interface ShowtimeStatsResponse {
   occupancyRate: number;
   revenue: number;
 }
+
+

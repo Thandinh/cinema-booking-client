@@ -18,13 +18,23 @@ import {
 } from 'lucide-react';
 import { ticketApi } from '../../api/ticketApi';
 import { cinemaApi } from '../../api/cinemaApi';
+import { userApi } from '../../api/userApi';
 import { formatDateTime } from '../../utils/format';
-import type { TicketResponse } from '../../types/domain.types';
+import type { Cinema, TicketResponse } from '../../types/domain.types';
 
 type ScanState = 'idle' | 'processing' | 'success' | 'used' | 'error';
 
 const QR_READER_ELEMENT_ID = 'staff-qr-reader';
 const QR_FILE_READER_ELEMENT_ID = 'staff-qr-file-reader';
+
+const getRoleName = (role: unknown) => {
+  if (typeof role === 'string') return role;
+  if (role && typeof role === 'object' && 'name' in role) return String((role as { name?: unknown }).name ?? '');
+  return '';
+};
+
+const hasRole = (roles: unknown[] | undefined, roleName: string) =>
+  (roles ?? []).some(role => getRoleName(role).toUpperCase() === roleName);
 
 const loadImageFromFile = (file: File) => new Promise<HTMLImageElement>((resolve, reject) => {
   const imageUrl = URL.createObjectURL(file);
@@ -245,8 +255,19 @@ const StaffTicketScannerPage = () => {
   const cameraSessionRef = useRef(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const currentUserQuery = useQuery({
+    queryKey: ['staff-check-in-profile'],
+    queryFn: () => userApi.getMyProfile().then(res => res.data.result),
+    staleTime: 60_000,
+  });
+
+  const currentUser = currentUserQuery.data;
+  const isAdminAccount = hasRole(currentUser?.roles as unknown[] | undefined, 'ADMIN');
+  const isStaffAccount = hasRole(currentUser?.roles as unknown[] | undefined, 'STAFF');
+
   const cinemasQuery = useQuery({
     queryKey: ['staff-check-in-cinemas'],
+    enabled: isAdminAccount,
     queryFn: () => cinemaApi.getAll({ page: 0, size: 300 }).then(res => res.data.result.content),
   });
 
@@ -257,7 +278,13 @@ const StaffTicketScannerPage = () => {
     queryFn: () => ticketApi.getOpenCheckInShowtimes(selectedCinemaId).then(res => res.data.result),
   });
 
-  const cinemas = useMemo(() => cinemasQuery.data ?? [], [cinemasQuery.data]);
+  const assignedCinemas = useMemo<Cinema[]>(() => currentUser?.assignedCinemas ?? [], [currentUser?.assignedCinemas]);
+  const cinemas = useMemo<Cinema[]>(
+    () => (isAdminAccount ? cinemasQuery.data ?? [] : assignedCinemas),
+    [assignedCinemas, cinemasQuery.data, isAdminAccount],
+  );
+  const cinemasLoading = currentUserQuery.isLoading || (isAdminAccount && cinemasQuery.isLoading);
+  const hasNoAssignedCinema = !currentUserQuery.isLoading && isStaffAccount && !isAdminAccount && assignedCinemas.length === 0;
   const cityOptions = useMemo(
     () => Array.from(new Set(cinemas.map(cinema => cinema.city).filter((city): city is string => Boolean(city)))).sort(),
     [cinemas],
@@ -534,21 +561,28 @@ const StaffTicketScannerPage = () => {
             Quét mã QR trên vé điện tử của khách hàng để xác nhận check-in.
           </p>
         </div>
-
         <section className="cinema-card mb-6 p-5">
-          <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="font-black text-slate-950 dark:text-white">Ngữ cảnh soát vé</h2>
               <p className="mt-1 text-xs font-semibold cinema-muted">
                 Chọn đúng rạp và suất chiếu trước khi quét để tránh dùng nhầm vé của khách.
               </p>
             </div>
-            {selectedCinema && selectedShowtime && (
-              <div className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">
-                {selectedCinema.name} · {selectedShowtime.roomName}
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedCinema && selectedShowtime && (
+                <div className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20">
+                  {selectedCinema.name} · {selectedShowtime.roomName}
+                </div>
+              )}
+            </div>
           </div>
+
+          {hasNoAssignedCinema && (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+              Tài khoản nhân viên này chưa được gắn rạp phụ trách. Vui lòng liên hệ admin để gắn rạp trước khi soát vé.
+            </div>
+          )}
 
           <div className="grid gap-3 md:grid-cols-3">
             <label className="block">
@@ -562,7 +596,7 @@ const StaffTicketScannerPage = () => {
                   reset();
                 }}
                 className="cinema-input"
-                disabled={cinemasQuery.isLoading}
+                disabled={cinemasLoading || hasNoAssignedCinema}
               >
                 <option value="">Tất cả thành phố</option>
                 {cityOptions.map(city => (
@@ -583,7 +617,7 @@ const StaffTicketScannerPage = () => {
                   reset();
                 }}
                 className="cinema-input"
-                disabled={cinemasQuery.isLoading}
+                disabled={cinemasLoading || hasNoAssignedCinema}
               >
                 <option value="">Chọn rạp</option>
                 {filteredCinemas.map(cinema => (
@@ -901,3 +935,4 @@ const InfoRow = ({
 );
 
 export default StaffTicketScannerPage;
+

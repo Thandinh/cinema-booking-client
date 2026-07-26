@@ -94,9 +94,10 @@ const buildEmptyChartData = (mode: 'daily' | 'monthly'): ChartPoint[] => {
 };
 
 const AdminDashboardPage = () => {
-  const { user } = useAuthStore();
+  const { user, hasPermission } = useAuthStore();
   const [period, setPeriod] = useState<'daily' | 'monthly'>('daily');
   const [isExporting, setIsExporting] = useState(false);
+  const canExportRevenue = hasPermission('REPORT_VIEW') && (hasPermission('USER_VIEW') || hasPermission('CINEMA_CREATE'));
 
   const { data: summary, isLoading: loadingSummary } = useQuery({
     queryKey: ['analytics-summary'],
@@ -209,15 +210,17 @@ const AdminDashboardPage = () => {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleExportRevenue}
-            disabled={isExporting}
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-neutral-200"
-          >
-            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-            {'Xu\u1ea5t CSV'}
-          </button>
+          {canExportRevenue && (
+            <button
+              type="button"
+              onClick={handleExportRevenue}
+              disabled={isExporting}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-slate-950 px-4 text-sm font-black text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-950 dark:hover:bg-neutral-200"
+            >
+              {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              {'Xu\u1ea5t CSV'}
+            </button>
+          )}
         </div>
 
         {/* KPIs */}

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import {
+  Building2,
   CalendarDays,
   Clock3,
   Globe2,
@@ -35,11 +36,11 @@ const phoneRegex = /^(\+84|0)[3-9][0-9]{8}$/;
 const strongPasswordRegex = /^(?=\S+$)(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9\s]).+$/;
 
 const profileSchema = z.object({
-  firstName: z.string().trim().min(1, 'Nhập tên'),
-  lastName: z.string().trim().min(1, 'Nhập họ'),
+  firstName: z.string().trim().min(1, 'Nháº­p tÃªn'),
+  lastName: z.string().trim().min(1, 'Nháº­p há»'),
   phone: z.string().trim().optional().refine(
     value => !value || phoneRegex.test(value),
-    'Số điện thoại không hợp lệ',
+    'Sá»‘ Ä‘iá»‡n thoáº¡i khÃ´ng há»£p lá»‡',
   ),
   dob: z.string().optional().refine((value) => {
     if (!value) return true;
@@ -47,22 +48,22 @@ const profileSchema = z.object({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return Number.isFinite(selectedDate.getTime()) && selectedDate < today;
-  }, 'Ngày sinh phải nhỏ hơn ngày hiện tại'),
+  }, 'NgÃ y sinh pháº£i nhá» hÆ¡n ngÃ y hiá»‡n táº¡i'),
 });
 
 const passwordSchema = z.object({
-  currentPassword: z.string().min(1, 'Nhập mật khẩu hiện tại'),
+  currentPassword: z.string().min(1, 'Nháº­p máº­t kháº©u hiá»‡n táº¡i'),
   newPassword: z.string()
-    .min(8, 'Mật khẩu cần ít nhất 8 ký tự')
-    .max(72, 'Mật khẩu tối đa 72 ký tự')
-    .regex(strongPasswordRegex, 'Cần chữ hoa, chữ thường, số, ký tự đặc biệt và không có khoảng trắng'),
-  confirmPassword: z.string().min(1, 'Nhập lại mật khẩu mới'),
+    .min(8, 'Máº­t kháº©u cáº§n Ã­t nháº¥t 8 kÃ½ tá»±')
+    .max(72, 'Máº­t kháº©u tá»‘i Ä‘a 72 kÃ½ tá»±')
+    .regex(strongPasswordRegex, 'Cáº§n chá»¯ hoa, chá»¯ thÆ°á»ng, sá»‘, kÃ½ tá»± Ä‘áº·c biá»‡t vÃ  khÃ´ng cÃ³ khoáº£ng tráº¯ng'),
+  confirmPassword: z.string().min(1, 'Nháº­p láº¡i máº­t kháº©u má»›i'),
 }).refine(data => data.newPassword === data.confirmPassword, {
   path: ['confirmPassword'],
-  message: 'Mật khẩu nhập lại không khớp',
+  message: 'Máº­t kháº©u nháº­p láº¡i khÃ´ng khá»›p',
 }).refine(data => data.currentPassword !== data.newPassword, {
   path: ['newPassword'],
-  message: 'Mật khẩu mới nên khác mật khẩu hiện tại',
+  message: 'Máº­t kháº©u má»›i nÃªn khÃ¡c máº­t kháº©u hiá»‡n táº¡i',
 });
 
 type ProfileForm = z.infer<typeof profileSchema>;
@@ -70,9 +71,9 @@ type PasswordForm = z.infer<typeof passwordSchema>;
 
 
 const formatSessionTime = (value?: string) => {
-  if (!value) return 'Chưa rõ';
+  if (!value) return 'ChÆ°a rÃµ';
   const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return 'Chưa rõ';
+  if (!Number.isFinite(date.getTime())) return 'ChÆ°a rÃµ';
   return new Intl.DateTimeFormat('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
@@ -83,20 +84,20 @@ const formatSessionTime = (value?: string) => {
 };
 
 const compactUserAgent = (userAgent?: string) => {
-  if (!userAgent) return 'Thiết bị không xác định';
-  if (/mobile|android|iphone|ipad/i.test(userAgent)) return 'Trình duyệt di động';
+  if (!userAgent) return 'Thiáº¿t bá»‹ khÃ´ng xÃ¡c Ä‘á»‹nh';
+  if (/mobile|android|iphone|ipad/i.test(userAgent)) return 'TrÃ¬nh duyá»‡t di Ä‘á»™ng';
   if (/edg/i.test(userAgent)) return 'Microsoft Edge';
-  if (/chrome/i.test(userAgent)) return 'Chrome trên máy tính';
-  if (/firefox/i.test(userAgent)) return 'Firefox trên máy tính';
-  if (/safari/i.test(userAgent)) return 'Safari trên máy tính';
+  if (/chrome/i.test(userAgent)) return 'Chrome trÃªn mÃ¡y tÃ­nh';
+  if (/firefox/i.test(userAgent)) return 'Firefox trÃªn mÃ¡y tÃ­nh';
+  if (/safari/i.test(userAgent)) return 'Safari trÃªn mÃ¡y tÃ­nh';
   return userAgent.length > 72 ? `${userAgent.slice(0, 72)}...` : userAgent;
 };
 const getPasswordErrorMessage = (error: unknown) => {
   const code = (error as any)?.response?.data?.code;
-  if (code === 1022) return 'Mật khẩu hiện tại không đúng.';
-  if (code === 1023) return 'Mật khẩu nhập lại không khớp.';
-  if (code === 1011) return 'Mật khẩu mới chưa đủ mạnh.';
-  return 'Không thể đổi mật khẩu lúc này.';
+  if (code === 1022) return 'Máº­t kháº©u hiá»‡n táº¡i khÃ´ng Ä‘Ãºng.';
+  if (code === 1023) return 'Máº­t kháº©u nháº­p láº¡i khÃ´ng khá»›p.';
+  if (code === 1011) return 'Máº­t kháº©u má»›i chÆ°a Ä‘á»§ máº¡nh.';
+  return 'KhÃ´ng thá»ƒ Ä‘á»•i máº­t kháº©u lÃºc nÃ y.';
 };
 
 const ProfilePage = () => {
@@ -155,24 +156,24 @@ const ProfilePage = () => {
         }, permissions);
       }
       queryClient.invalidateQueries({ queryKey: ['my-profile'] });
-      toast.success('Cập nhật hồ sơ thành công!');
+      toast.success('Cáº­p nháº­t há»“ sÆ¡ thÃ nh cÃ´ng!');
     },
-    onError: () => toast.error('Không thể cập nhật hồ sơ.'),
+    onError: () => toast.error('KhÃ´ng thá»ƒ cáº­p nháº­t há»“ sÆ¡.'),
   });
 
   const passwordMutation = useMutation({
     mutationFn: (data: PasswordForm) => userApi.changeMyPassword(data),
     onSuccess: () => {
       passwordForm.reset();
-      toast.success('Đổi mật khẩu thành công!');
+      toast.success('Äá»•i máº­t kháº©u thÃ nh cÃ´ng!');
     },
     onError: (error) => toast.error(getPasswordErrorMessage(error)),
   });
 
   const resendMutation = useMutation({
     mutationFn: () => userApi.resendEmailVerification({ email: profile?.email ?? '' }),
-    onSuccess: () => toast.success('Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư.'),
-    onError: () => toast.error('Không thể gửi lại email xác thực.'),
+    onSuccess: () => toast.success('ÄÃ£ gá»­i láº¡i email xÃ¡c thá»±c. Vui lÃ²ng kiá»ƒm tra há»™p thÆ°.'),
+    onError: () => toast.error('KhÃ´ng thá»ƒ gá»­i láº¡i email xÃ¡c thá»±c.'),
   });
 
 
@@ -180,30 +181,32 @@ const ProfilePage = () => {
     mutationFn: (sessionId: string) => authApi.revokeSession(sessionId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auth-sessions'] });
-      toast.success('Đã đăng xuất phiên đăng nhập đã chọn.');
+      toast.success('ÄÃ£ Ä‘Äƒng xuáº¥t phiÃªn Ä‘Äƒng nháº­p Ä‘Ã£ chá»n.');
     },
-    onError: () => toast.error('Không thể đăng xuất phiên này.'),
+    onError: () => toast.error('KhÃ´ng thá»ƒ Ä‘Äƒng xuáº¥t phiÃªn nÃ y.'),
   });
 
   const revokeOtherSessionsMutation = useMutation({
     mutationFn: () => authApi.revokeOtherSessions(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['auth-sessions'] });
-      toast.success('Đã đăng xuất khỏi các thiết bị khác.');
+      toast.success('ÄÃ£ Ä‘Äƒng xuáº¥t khá»i cÃ¡c thiáº¿t bá»‹ khÃ¡c.');
     },
-    onError: () => toast.error('Không thể đăng xuất các thiết bị khác.'),
+    onError: () => toast.error('KhÃ´ng thá»ƒ Ä‘Äƒng xuáº¥t cÃ¡c thiáº¿t bá»‹ khÃ¡c.'),
   });
   const initials = profile?.firstName
     ? `${profile.lastName?.charAt(0) ?? ''}${profile.firstName.charAt(0)}`.toUpperCase()
     : profile?.username?.substring(0, 2).toUpperCase() ?? 'U';
   const isEmailVerified = profile?.emailVerified === true;
+  const assignedCinemas = profile?.assignedCinemas ?? [];
+  const isStaffProfile = (profile?.roles ?? []).some((role: any) => String(role?.name || role).toUpperCase() === 'STAFF');
 
   if (isLoading) {
     return (
       <div className="flex min-h-[420px] items-center justify-center">
         <div className="flex items-center gap-3 rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 dark:bg-neutral-900 dark:text-neutral-200 dark:ring-white/10">
           <Loader2 className="animate-spin text-amber-500" size={18} />
-          Đang tải hồ sơ...
+          Äang táº£i há»“ sÆ¡...
         </div>
       </div>
     );
@@ -212,19 +215,19 @@ const ProfilePage = () => {
   return (
     <>
       <Helmet>
-        <title>Hồ sơ cá nhân — cinemabooking.vn</title>
+        <title>Há»“ sÆ¡ cÃ¡ nhÃ¢n â€” cinemabooking.vn</title>
       </Helmet>
 
       <div className="page-container-md py-8">
         <div className="mb-8">
           <div className="badge-brand w-fit">
-            <UserCircle size={13} /> Tài khoản
+            <UserCircle size={13} /> TÃ i khoáº£n
           </div>
           <h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl dark:text-white">
-            Hồ sơ cá nhân
+            Há»“ sÆ¡ cÃ¡ nhÃ¢n
           </h1>
           <p className="mt-2 text-sm cinema-muted">
-            Quản lý thông tin cá nhân và bảo mật tài khoản.
+            Quáº£n lÃ½ thÃ´ng tin cÃ¡ nhÃ¢n vÃ  báº£o máº­t tÃ i khoáº£n.
           </p>
         </div>
 
@@ -234,24 +237,24 @@ const ProfilePage = () => {
               <div className="cinema-card p-6">
                 <div className="mb-5 flex items-center justify-between gap-3">
                   <h2 className="text-lg font-black text-slate-950 dark:text-white">
-                    Thông tin cơ bản
+                    ThÃ´ng tin cÆ¡ báº£n
                   </h2>
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-500 dark:bg-white/5 dark:text-neutral-400">
-                    Hồ sơ
+                    Há»“ sÆ¡
                   </span>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField label="Họ" error={profileForm.formState.errors.lastName?.message}>
-                    <input {...profileForm.register('lastName')} placeholder="Nguyễn" className="cinema-input" />
+                  <FormField label="Há»" error={profileForm.formState.errors.lastName?.message}>
+                    <input {...profileForm.register('lastName')} placeholder="Nguyá»…n" className="cinema-input" />
                   </FormField>
-                  <FormField label="Tên" error={profileForm.formState.errors.firstName?.message}>
+                  <FormField label="TÃªn" error={profileForm.formState.errors.firstName?.message}>
                     <input {...profileForm.register('firstName')} placeholder="An" className="cinema-input" />
                   </FormField>
-                  <FormField label="Số điện thoại" icon={Phone} error={profileForm.formState.errors.phone?.message}>
+                  <FormField label="Sá»‘ Ä‘iá»‡n thoáº¡i" icon={Phone} error={profileForm.formState.errors.phone?.message}>
                     <input {...profileForm.register('phone')} placeholder="0901234567" className="cinema-input pl-10" />
                   </FormField>
-                  <FormField label="Ngày sinh" icon={CalendarDays} error={profileForm.formState.errors.dob?.message}>
+                  <FormField label="NgÃ y sinh" icon={CalendarDays} error={profileForm.formState.errors.dob?.message}>
                     <input {...profileForm.register('dob')} type="date" className="cinema-input pl-10" />
                   </FormField>
                 </div>
@@ -259,7 +262,7 @@ const ProfilePage = () => {
 
               <div className="mt-5 flex items-center justify-between gap-4">
                 <p className="text-sm cinema-muted">
-                  {profileForm.formState.isDirty ? 'Bạn có thay đổi chưa lưu.' : 'Thông tin đang được cập nhật.'}
+                  {profileForm.formState.isDirty ? 'Báº¡n cÃ³ thay Ä‘á»•i chÆ°a lÆ°u.' : 'ThÃ´ng tin Ä‘ang Ä‘Æ°á»£c cáº­p nháº­t.'}
                 </p>
                 <button
                   type="submit"
@@ -267,8 +270,8 @@ const ProfilePage = () => {
                   className="btn-primary"
                 >
                   {updateMutation.isPending
-                    ? <><Loader2 size={16} className="animate-spin" /> Đang lưu...</>
-                    : <><CheckCircle2 size={16} /> Lưu thay đổi</>
+                    ? <><Loader2 size={16} className="animate-spin" /> Äang lÆ°u...</>
+                    : <><CheckCircle2 size={16} /> LÆ°u thay Ä‘á»•i</>
                   }
                 </button>
               </div>
@@ -278,7 +281,7 @@ const ProfilePage = () => {
               <div className="cinema-card p-6">
                 <div className="mb-5 flex items-center justify-between gap-3">
                   <h2 className="text-lg font-black text-slate-950 dark:text-white">
-                    Bảo mật tài khoản
+                    Báº£o máº­t tÃ i khoáº£n
                   </h2>
                   <span className="grid size-9 place-items-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
                     <KeyRound size={17} />
@@ -286,7 +289,7 @@ const ProfilePage = () => {
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <FormField label="Mật khẩu hiện tại" icon={Lock} error={passwordForm.formState.errors.currentPassword?.message}>
+                  <FormField label="Máº­t kháº©u hiá»‡n táº¡i" icon={Lock} error={passwordForm.formState.errors.currentPassword?.message}>
                     <input
                       {...passwordForm.register('currentPassword')}
                       type="password"
@@ -294,7 +297,7 @@ const ProfilePage = () => {
                       className="cinema-input pl-10"
                     />
                   </FormField>
-                  <FormField label="Mật khẩu mới" icon={KeyRound} error={passwordForm.formState.errors.newPassword?.message}>
+                  <FormField label="Máº­t kháº©u má»›i" icon={KeyRound} error={passwordForm.formState.errors.newPassword?.message}>
                     <input
                       {...passwordForm.register('newPassword')}
                       type="password"
@@ -302,7 +305,7 @@ const ProfilePage = () => {
                       className="cinema-input pl-10"
                     />
                   </FormField>
-                  <FormField label="Nhập lại mật khẩu" icon={ShieldCheck} error={passwordForm.formState.errors.confirmPassword?.message}>
+                  <FormField label="Nháº­p láº¡i máº­t kháº©u" icon={ShieldCheck} error={passwordForm.formState.errors.confirmPassword?.message}>
                     <input
                       {...passwordForm.register('confirmPassword')}
                       type="password"
@@ -314,7 +317,7 @@ const ProfilePage = () => {
 
                 <div className="mt-5 flex items-center justify-between gap-4">
                   <p className="text-xs font-semibold leading-5 text-slate-500 dark:text-neutral-400">
-                    Mật khẩu cần 8-72 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
+                    Máº­t kháº©u cáº§n 8-72 kÃ½ tá»±, gá»“m chá»¯ hoa, chá»¯ thÆ°á»ng, sá»‘ vÃ  kÃ½ tá»± Ä‘áº·c biá»‡t.
                   </p>
                   <button
                     type="submit"
@@ -322,8 +325,8 @@ const ProfilePage = () => {
                     className="btn-secondary shrink-0"
                   >
                     {passwordMutation.isPending
-                      ? <><Loader2 size={16} className="animate-spin" /> Đang đổi...</>
-                      : <><KeyRound size={16} /> Đổi mật khẩu</>
+                      ? <><Loader2 size={16} className="animate-spin" /> Äang Ä‘á»•i...</>
+                      : <><KeyRound size={16} /> Äá»•i máº­t kháº©u</>
                     }
                   </button>
                 </div>
@@ -334,9 +337,9 @@ const ProfilePage = () => {
             <div className="cinema-card p-6">
               <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-black text-slate-950 dark:text-white">Thiết bị đang đăng nhập</h2>
+                  <h2 className="text-lg font-black text-slate-950 dark:text-white">Thiáº¿t bá»‹ Ä‘ang Ä‘Äƒng nháº­p</h2>
                   <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-neutral-400">
-                    Quản lý các phiên đăng nhập để bảo vệ tài khoản khi dùng chung thiết bị.
+                    Quáº£n lÃ½ cÃ¡c phiÃªn Ä‘Äƒng nháº­p Ä‘á»ƒ báº£o vá»‡ tÃ i khoáº£n khi dÃ¹ng chung thiáº¿t bá»‹.
                   </p>
                 </div>
                 <button
@@ -346,19 +349,19 @@ const ProfilePage = () => {
                   className="btn-secondary h-9 px-3 text-xs"
                 >
                   {revokeOtherSessionsMutation.isPending
-                    ? <><Loader2 size={14} className="animate-spin" /> Đang xử lý...</>
-                    : <><ShieldCheck size={14} /> Đăng xuất thiết bị khác</>
+                    ? <><Loader2 size={14} className="animate-spin" /> Äang xá»­ lÃ½...</>
+                    : <><ShieldCheck size={14} /> ÄÄƒng xuáº¥t thiáº¿t bá»‹ khÃ¡c</>
                   }
                 </button>
               </div>
 
               {sessionsLoading ? (
                 <div className="flex items-center gap-2 rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-500 dark:bg-neutral-950 dark:text-neutral-400">
-                  <Loader2 size={16} className="animate-spin text-amber-500" /> Đang tải phiên đăng nhập...
+                  <Loader2 size={16} className="animate-spin text-amber-500" /> Äang táº£i phiÃªn Ä‘Äƒng nháº­p...
                 </div>
               ) : sessions.length === 0 ? (
                 <div className="rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-500 dark:bg-neutral-950 dark:text-neutral-400">
-                  Chưa có phiên đăng nhập nào được ghi nhận.
+                  ChÆ°a cÃ³ phiÃªn Ä‘Äƒng nháº­p nÃ o Ä‘Æ°á»£c ghi nháº­n.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -373,11 +376,11 @@ const ProfilePage = () => {
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
                               <p className="truncate text-sm font-black text-slate-950 dark:text-white">{compactUserAgent(session.userAgent)}</p>
-                              {session.current && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">Hiện tại</span>}
-                              {!active && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">Đã đăng xuất</span>}
+                              {session.current && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">Hiá»‡n táº¡i</span>}
+                              {!active && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-black uppercase text-slate-500 dark:bg-neutral-800 dark:text-neutral-400">ÄÃ£ Ä‘Äƒng xuáº¥t</span>}
                             </div>
                             <div className="mt-2 grid gap-1 text-xs font-semibold text-slate-500 dark:text-neutral-400 sm:grid-cols-2">
-                              <span className="inline-flex items-center gap-1.5"><Globe2 size={13} /> {session.ipAddress || 'Không rõ IP'}</span>
+                              <span className="inline-flex items-center gap-1.5"><Globe2 size={13} /> {session.ipAddress || 'KhÃ´ng rÃµ IP'}</span>
                               <span className="inline-flex items-center gap-1.5"><Clock3 size={13} /> {formatSessionTime(session.createdAt)}</span>
                             </div>
                           </div>
@@ -389,7 +392,7 @@ const ProfilePage = () => {
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-red-500/10 dark:hover:text-red-300"
                         >
                           {revokeSessionMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
-                          Đăng xuất
+                          ÄÄƒng xuáº¥t
                         </button>
                       </div>
                     );
@@ -399,13 +402,13 @@ const ProfilePage = () => {
             </div>
             <div className="cinema-card p-6">
               <h2 className="mb-5 text-lg font-black text-slate-950 dark:text-white">
-                Thông tin tài khoản
+                ThÃ´ng tin tÃ i khoáº£n
               </h2>
               <div className="grid gap-3 sm:grid-cols-2">
-                <ReadonlyField icon={User} label="Tên đăng nhập" value={profile?.username ?? '—'} />
-                <ReadonlyField icon={Mail} label="Email" value={profile?.email ?? 'Chưa cung cấp'} />
-                <ReadonlyField icon={Lock} label="Mật khẩu" value="••••••••" />
-                <ReadonlyField icon={Ticket} label="Vai trò" value={profile?.roles?.map((r: any) => r.name || r).join(', ') ?? 'USER'} />
+                <ReadonlyField icon={User} label="TÃªn Ä‘Äƒng nháº­p" value={profile?.username ?? 'â€”'} />
+                <ReadonlyField icon={Mail} label="Email" value={profile?.email ?? 'ChÆ°a cung cáº¥p'} />
+                <ReadonlyField icon={Lock} label="Máº­t kháº©u" value="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" />
+                <ReadonlyField icon={Ticket} label="Vai trÃ²" value={profile?.roles?.map((r: any) => r.name || r).join(', ') ?? 'USER'} />
               </div>
             </div>
           </div>
@@ -441,6 +444,36 @@ const ProfilePage = () => {
               )}
             </div>
 
+            {isStaffProfile && (
+              <div className="cinema-card p-5">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-black text-slate-950 dark:text-white">Rap phu trach</h2>
+                    <p className="mt-1 text-xs font-semibold cinema-muted">Pham vi soat ve va van hanh cua tai khoan staff.</p>
+                  </div>
+                  <span className="grid size-9 place-items-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+                    <Building2 size={17} />
+                  </span>
+                </div>
+                {assignedCinemas.length > 0 ? (
+                  <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+                    {assignedCinemas.map(cinema => (
+                      <div key={cinema.id} className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-neutral-950 dark:ring-white/10">
+                        <p className="text-sm font-black text-slate-950 dark:text-white">{cinema.name}</p>
+                        <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-neutral-400">
+                          {[cinema.address, cinema.city].filter(Boolean).join(', ') || 'Chua co dia chi'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-800 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-500/20">
+                    Chua duoc admin gan rap phu trach.
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className={`rounded-2xl border p-4 ${
               isEmailVerified
                 ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/20 dark:bg-emerald-500/10'
@@ -456,14 +489,14 @@ const ProfilePage = () => {
                   <p className={`text-sm font-black ${
                     isEmailVerified ? 'text-emerald-800 dark:text-emerald-200' : 'text-amber-800 dark:text-amber-200'
                   }`}>
-                    {isEmailVerified ? 'Email đã xác thực' : 'Email chưa xác thực'}
+                    {isEmailVerified ? 'Email Ä‘Ã£ xÃ¡c thá»±c' : 'Email chÆ°a xÃ¡c thá»±c'}
                   </p>
                   <p className={`mt-1 text-xs font-semibold leading-5 ${
                     isEmailVerified ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'
                   }`}>
                     {isEmailVerified
-                      ? 'Tài khoản của bạn đã sẵn sàng để nhận vé và thông báo.'
-                      : 'Xác thực email để nhận vé điện tử và bảo vệ tài khoản tốt hơn.'}
+                      ? 'TÃ i khoáº£n cá»§a báº¡n Ä‘Ã£ sáºµn sÃ ng Ä‘á»ƒ nháº­n vÃ© vÃ  thÃ´ng bÃ¡o.'
+                      : 'XÃ¡c thá»±c email Ä‘á»ƒ nháº­n vÃ© Ä‘iá»‡n tá»­ vÃ  báº£o vá»‡ tÃ i khoáº£n tá»‘t hÆ¡n.'}
                   </p>
                   {!isEmailVerified && profile?.email && (
                     <button
@@ -473,7 +506,7 @@ const ProfilePage = () => {
                       className="mt-3 inline-flex h-9 items-center gap-2 rounded-lg bg-white px-3 text-xs font-black text-amber-700 shadow-sm ring-1 ring-amber-200 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-neutral-950 dark:text-amber-300 dark:ring-amber-500/20 dark:hover:bg-neutral-900"
                     >
                       {resendMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                      Gửi lại xác thực
+                      Gá»­i láº¡i xÃ¡c thá»±c
                     </button>
                   )}
                 </div>
@@ -484,7 +517,7 @@ const ProfilePage = () => {
               <div className="flex items-start gap-3">
                 <ShieldCheck className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" size={17} />
                 <p className="text-xs font-semibold leading-5 text-emerald-700 dark:text-emerald-300">
-                  Thông tin của bạn được bảo vệ và chỉ dùng cho đặt vé, nhận vé điện tử, hỗ trợ giao dịch.
+                  ThÃ´ng tin cá»§a báº¡n Ä‘Æ°á»£c báº£o vá»‡ vÃ  chá»‰ dÃ¹ng cho Ä‘áº·t vÃ©, nháº­n vÃ© Ä‘iá»‡n tá»­, há»— trá»£ giao dá»‹ch.
                 </p>
               </div>
             </div>
@@ -529,3 +562,4 @@ const ReadonlyField = ({ icon: Icon, label, value }: { icon: LucideIcon; label: 
 );
 
 export default ProfilePage;
+

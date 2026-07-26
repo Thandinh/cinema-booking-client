@@ -32,6 +32,7 @@ const AdminPaymentPage     = lazy(() => import('../pages/admin/AdminPaymentPage'
 const AdminUserPage        = lazy(() => import('../pages/admin/AdminUserPage'));
 const AdminAuditLogPage    = lazy(() => import('../pages/admin/AdminAuditLogPage'));
 const AdminPromotionPage   = lazy(() => import('../pages/admin/AdminPromotionPage'));
+const StaffAssignedCinemasPage = lazy(() => import('../pages/staff/StaffAssignedCinemasPage'));
 const StaffTicketScannerPage = lazy(() => import('../pages/staff/StaffTicketScannerPage'));
 
 /* ── Page loader ── */
@@ -100,7 +101,7 @@ const AppRouter = () => (
         <Route
           path="/admin/rooms"
           element={
-            <ProtectedRoute permission="ROOM_CREATE">
+            <ProtectedRoute permission="ROOM_VIEW">
               <AdminRoomSeatPage />
             </ProtectedRoute>
           }
@@ -150,6 +151,14 @@ const AppRouter = () => (
           element={
             <ProtectedRoute permission="AUDIT_VIEW">
               <AdminAuditLogPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/cinemas"
+          element={
+            <ProtectedRoute permission="TICKET_CHECKIN">
+              <StaffAssignedCinemasPage />
             </ProtectedRoute>
           }
         />

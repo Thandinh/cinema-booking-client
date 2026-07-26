@@ -8,12 +8,12 @@ import { Calendar, Loader2, Plus, Trash2, X } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
 import { movieApi } from '../../api/movieApi';
 import { cinemaApi } from '../../api/cinemaApi';
+import { userApi } from '../../api/userApi';
 import type { ApiResponse, PageResult } from '../../types/api.types';
-import type { Showtime, Movie } from '../../types/domain.types';
+import type { Cinema, Showtime, Movie } from '../../types/domain.types';
 import { toast } from '../../components/ui/toastBus';
 import { formatDateTime, formatMoney, formatTime } from '../../utils/format';
 
-// ─── API ──────────────────────────────────────────────────
 const showtimeAdminApi = {
   getAll: (params?: { page?: number; size?: number; sort?: string }) =>
     axiosClient.get<ApiResponse<PageResult<Showtime>>>('/api/v1/showtimes', { params }),
@@ -25,13 +25,25 @@ const showtimeAdminApi = {
     axiosClient.delete<ApiResponse<void>>(`/api/v1/showtimes/${id}`),
 };
 
-// ─── Helper: fetch rooms by cinema ────────────────────────
 const roomApi = {
   getByCinema: (cinemaId: string) =>
     axiosClient.get<ApiResponse<{ id: string; name: string }[]>>(`/api/v1/rooms/cinema/${cinemaId}`),
 };
 
-// ─── Schema ──────────────────────────────────────────────
+const getRoleName = (role: unknown) => {
+  if (typeof role === 'string') return role;
+  if (role && typeof role === 'object' && 'name' in role) return String((role as { name?: unknown }).name ?? '');
+  return '';
+};
+
+const hasRole = (roles: unknown[] | undefined, roleName: string) =>
+  (roles ?? []).some(role => getRoleName(role).toUpperCase() === roleName);
+
+const toDateTimeLocalValue = (date: Date) => {
+  const localOffsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - localOffsetMs).toISOString().slice(0, 16);
+};
+
 const showtimeSchema = z.object({
   movieId: z.string().min(1, 'Chọn phim'),
   city: z.string().min(1, 'Chọn thành phố'),
@@ -43,7 +55,6 @@ const showtimeSchema = z.object({
 });
 type ShowtimeFormData = z.infer<typeof showtimeSchema>;
 
-// ─── Modal ────────────────────────────────────────────────
 const ShowtimeFormModal = ({
   isOpen, onClose, onSubmit, isSubmitting,
 }: {
@@ -56,35 +67,60 @@ const ShowtimeFormModal = ({
     resolver: zodResolver(showtimeSchema) as any,
   });
 
+  const selectedMovieId = watch('movieId');
   const selectedCity = watch('city');
   const selectedCinemaId = watch('cinemaId');
+  const selectedStartTime = watch('startTime');
 
-  // Fetch data for selects
   const { data: moviesData } = useQuery({
     queryKey: ['modal-movies'],
     queryFn: () => movieApi.getAll({ status: 'NOW_SHOWING', size: 100 }).then(r => r.data.result.content),
     enabled: isOpen,
   });
 
-  const { data: cinemasData } = useQuery({
-    queryKey: ['modal-cinemas'],
-    queryFn: () => cinemaApi.getMapData().then(r => r.data.result),
+  const currentUserQuery = useQuery({
+    queryKey: ['staff-check-in-profile'],
+    queryFn: () => userApi.getMyProfile().then(r => r.data.result),
     enabled: isOpen,
+    staleTime: 60_000,
   });
 
+  const currentUser = currentUserQuery.data;
+  const isAdminAccount = hasRole(currentUser?.roles as unknown[] | undefined, 'ADMIN');
+  const isStaffAccount = hasRole(currentUser?.roles as unknown[] | undefined, 'STAFF');
+
+  const { data: allCinemasData, isLoading: isLoadingAllCinemas } = useQuery({
+    queryKey: ['modal-cinemas-admin-all'],
+    queryFn: () => cinemaApi.getMapData().then(r => r.data.result),
+    enabled: isOpen && isAdminAccount,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const scopedCinemas = useMemo<Cinema[]>(
+    () => (isAdminAccount ? allCinemasData ?? [] : currentUser?.assignedCinemas ?? []),
+    [allCinemasData, currentUser?.assignedCinemas, isAdminAccount],
+  );
+
+  const isLoadingCinemas = currentUserQuery.isLoading || (isAdminAccount && isLoadingAllCinemas);
+  const hasNoStaffCinema = !currentUserQuery.isLoading && isStaffAccount && !isAdminAccount && scopedCinemas.length === 0;
+
   const cities = useMemo(() => {
-    const values = (cinemasData ?? [])
+    const values = scopedCinemas
       .map(cinema => cinema.city?.trim())
       .filter((city): city is string => Boolean(city));
     return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'vi'));
-  }, [cinemasData]);
+  }, [scopedCinemas]);
 
   const filteredCinemas = useMemo(() => {
     if (!selectedCity) return [];
-    return (cinemasData ?? [])
+    return scopedCinemas
       .filter(cinema => cinema.city === selectedCity)
       .sort((a, b) => a.name.localeCompare(b.name, 'vi'));
-  }, [cinemasData, selectedCity]);
+  }, [scopedCinemas, selectedCity]);
+
+  const selectedMovieDuration = useMemo(() => {
+    return (moviesData as Movie[] | undefined)?.find(movie => movie.id === selectedMovieId)?.duration ?? 0;
+  }, [moviesData, selectedMovieId]);
 
   const { data: roomsData } = useQuery({
     queryKey: ['modal-rooms', selectedCinemaId],
@@ -110,29 +146,63 @@ const ShowtimeFormModal = ({
     setValue('roomId', '');
   }, [selectedCinemaId, setValue]);
 
+  useEffect(() => {
+    if (!selectedStartTime || !selectedMovieDuration) {
+      setValue('endTime', '', { shouldValidate: true });
+      return;
+    }
+
+    const startDate = new Date(selectedStartTime);
+    if (Number.isNaN(startDate.getTime())) return;
+
+    const endDate = new Date(startDate.getTime() + selectedMovieDuration * 60_000);
+    setValue('endTime', toDateTimeLocalValue(endDate), { shouldValidate: true });
+  }, [selectedMovieDuration, selectedStartTime, setValue]);
+
   if (!isOpen) return null;
 
   const handleFormSubmit = (data: ShowtimeFormData) => {
     const { city: _city, cinemaId: _cinemaId, ...rest } = data;
+    const startDate = new Date(rest.startTime);
+    const endDate = new Date(rest.endTime);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) {
+      toast.error('Giờ kết thúc phải sau giờ bắt đầu. Hãy chọn lại giờ bắt đầu.');
+      return;
+    }
+
     onSubmit({
       ...rest,
-      startTime: new Date(rest.startTime).toISOString(),
-      endTime: new Date(rest.endTime).toISOString(),
+      startTime: startDate.toISOString(),
+      endTime: endDate.toISOString(),
     });
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200/80 dark:bg-neutral-900 dark:ring-white/10 fade-in-up max-h-[90vh]">
+      <div className="relative max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white shadow-2xl ring-1 ring-slate-200/80 fade-in-up dark:bg-neutral-900 dark:ring-white/10">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-white/10">
-          <h2 className="text-xl font-black text-slate-950 dark:text-white">Tạo suất chiếu mới</h2>
+          <div>
+            <h2 className="text-xl font-black text-slate-950 dark:text-white">Tạo suất chiếu mới</h2>
+            {isStaffAccount && !isAdminAccount && (
+              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-neutral-400">
+                Nhân viên chỉ tạo được suất chiếu trong các rạp được admin phân công.
+              </p>
+            )}
+          </div>
           <button onClick={onClose} className="grid size-8 place-items-center rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10">
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 p-6">
+          {hasNoStaffCinema && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+              Tài khoản nhân viên này chưa được gán rạp phụ trách, nên chưa thể tạo suất chiếu. Vui lòng liên hệ admin để gán rạp trước.
+            </div>
+          )}
+
           <div>
             <label className="cinema-label mb-2 block">Phim *</label>
             <select {...register('movieId')} className="cinema-input">
@@ -145,15 +215,15 @@ const ShowtimeFormModal = ({
           <div className="grid gap-4 lg:grid-cols-3">
             <div>
               <label className="cinema-label mb-2 block">Thành phố *</label>
-              <select {...register('city')} className="cinema-input">
-                <option value="">-- Chọn thành phố --</option>
+              <select {...register('city')} className="cinema-input" disabled={isLoadingCinemas || hasNoStaffCinema || scopedCinemas.length === 0}>
+                <option value="">{isLoadingCinemas ? 'Đang tải rạp...' : '-- Chọn thành phố --'}</option>
                 {cities.map(city => <option key={city} value={city}>{city}</option>)}
               </select>
               {errors.city && <p className="mt-1 text-xs text-red-500">{errors.city.message}</p>}
             </div>
             <div>
               <label className="cinema-label mb-2 block">Rạp *</label>
-              <select {...register('cinemaId')} className="cinema-input" disabled={!selectedCity}>
+              <select {...register('cinemaId')} className="cinema-input" disabled={!selectedCity || hasNoStaffCinema}>
                 <option value="">-- Chọn rạp --</option>
                 {filteredCinemas.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
@@ -161,7 +231,7 @@ const ShowtimeFormModal = ({
             </div>
             <div>
               <label className="cinema-label mb-2 block">Phòng chiếu *</label>
-              <select {...register('roomId')} className="cinema-input" disabled={!selectedCinemaId}>
+              <select {...register('roomId')} className="cinema-input" disabled={!selectedCinemaId || hasNoStaffCinema}>
                 <option value="">-- Chọn phòng --</option>
                 {(roomsData as { id: string; name: string }[] | undefined)?.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
@@ -177,7 +247,16 @@ const ShowtimeFormModal = ({
             </div>
             <div>
               <label className="cinema-label mb-2 block">Giờ kết thúc *</label>
-              <input type="datetime-local" {...register('endTime')} className="cinema-input" />
+              <input
+                type="datetime-local"
+                {...register('endTime')}
+                className="cinema-input bg-slate-50 text-slate-700 dark:bg-neutral-950 dark:text-neutral-200"
+                readOnly
+                tabIndex={-1}
+              />
+              <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-neutral-400">
+                Tự tính theo thời lượng phim{selectedMovieDuration ? ` (${selectedMovieDuration} phút)` : ''}.
+              </p>
               {errors.endTime && <p className="mt-1 text-xs text-red-500">{errors.endTime.message}</p>}
             </div>
           </div>
@@ -190,7 +269,7 @@ const ShowtimeFormModal = ({
 
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-5 dark:border-white/10">
             <button type="button" onClick={onClose} className="btn-ghost">Hủy</button>
-            <button type="submit" disabled={isSubmitting} className="btn-primary">
+            <button type="submit" disabled={isSubmitting || hasNoStaffCinema || isLoadingCinemas} className="btn-primary disabled:opacity-60">
               {isSubmitting && <Loader2 size={16} className="animate-spin" />}
               Tạo suất chiếu
             </button>
@@ -201,7 +280,6 @@ const ShowtimeFormModal = ({
   );
 };
 
-// ─── Main Page ────────────────────────────────────────────
 const AdminShowtimePage = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
@@ -215,13 +293,22 @@ const AdminShowtimePage = () => {
 
   const createMutation = useMutation({
     mutationFn: (data: Record<string, unknown>) => showtimeAdminApi.create(data),
-    onSuccess: () => { toast.success('Đã tạo suất chiếu'); setIsModalOpen(false); queryClient.invalidateQueries({ queryKey: ['admin-showtimes'] }); },
+    onSuccess: () => {
+      toast.success('Đã tạo suất chiếu');
+      setIsModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['admin-showtimes'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-assigned-cinema-open-showtimes'] });
+    },
     onError: (e: any) => toast.error(e?.response?.data?.message || 'Lỗi khi tạo suất chiếu'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => showtimeAdminApi.delete(id),
-    onSuccess: () => { toast.success('Đã xóa suất chiếu'); queryClient.invalidateQueries({ queryKey: ['admin-showtimes'] }); },
+    onSuccess: () => {
+      toast.success('Đã xóa suất chiếu');
+      queryClient.invalidateQueries({ queryKey: ['admin-showtimes'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-assigned-cinema-open-showtimes'] });
+    },
     onError: () => toast.error('Không thể xóa, suất chiếu có thể đã có người đặt vé'),
   });
 
@@ -229,19 +316,19 @@ const AdminShowtimePage = () => {
 
   const statusBadge = (s: string) => {
     if (s === 'UPCOMING') return <span className="badge-brand">Sắp chiếu</span>;
-    if (s === 'ONGOING')  return <span className="badge-success">Đang chiếu</span>;
-    if (s === 'ENDED')    return <span className="badge-neutral">Đã kết thúc</span>;
+    if (s === 'ONGOING') return <span className="badge-success">Đang chiếu</span>;
+    if (s === 'ENDED') return <span className="badge-neutral">Đã kết thúc</span>;
     return <span className="badge-warning">{s}</span>;
   };
 
   return (
     <>
-      <Helmet><title>Quản lý Suất chiếu — Admin Portal</title></Helmet>
+      <Helmet><title>Quản lý suất chiếu | cinemabooking.vn</title></Helmet>
 
       <div className="p-4 sm:p-8">
         <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div>
-            <h1 className="text-2xl font-black text-slate-950 dark:text-white">Quản lý Suất chiếu</h1>
+            <h1 className="text-2xl font-black text-slate-950 dark:text-white">Quản lý suất chiếu</h1>
             <p className="mt-1 text-sm cinema-muted">Lên lịch và quản lý các suất chiếu phim.</p>
           </div>
           <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
@@ -279,7 +366,7 @@ const AdminShowtimePage = () => {
                   </td></tr>
                 ) : showtimes.map((st) => (
                   <tr key={st.id} className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5">
-                    <td className="px-6 py-4 font-black text-slate-950 dark:text-white max-w-[200px]">
+                    <td className="max-w-[200px] px-6 py-4 font-black text-slate-950 dark:text-white">
                       <p className="line-clamp-1">{st.movieTitle}</p>
                     </td>
                     <td className="px-6 py-4">
@@ -295,8 +382,10 @@ const AdminShowtimePage = () => {
                     </td>
                     <td className="px-6 py-4">{statusBadge(st.status)}</td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => { if (window.confirm('Xóa suất chiếu này?')) deleteMutation.mutate(st.id); }}
-                        className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400">
+                      <button
+                        onClick={() => { if (window.confirm('Xóa suất chiếu này?')) deleteMutation.mutate(st.id); }}
+                        className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                      >
                         <Trash2 size={15} />
                       </button>
                     </td>

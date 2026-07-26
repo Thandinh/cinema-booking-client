@@ -17,8 +17,11 @@ import {
   X,
 } from 'lucide-react';
 import { cinemaApi } from '../../api/cinemaApi';
+import { userApi } from '../../api/userApi';
 import { roomSeatApi, type RoomResponse, type SeatLayoutTemplate, type SeatResponse, type SeatType } from '../../api/roomSeatApi';
 import { toast } from '../../components/ui/toastBus';
+import { useAuthStore } from '../../stores/authStore';
+import type { Cinema } from '../../types/domain.types';
 
 type RoomModalState = {
   open: boolean;
@@ -96,13 +99,36 @@ const AdminRoomSeatPage = () => {
   const bulkPreviewRows = useMemo(() => buildBulkPreview(bulkForm), [bulkForm]);
   const bulkPreviewStats = useMemo(() => getBulkPreviewStats(bulkPreviewRows), [bulkPreviewRows]);
   const bulkPreviewTotal = bulkPreviewStats.normal + bulkPreviewStats.vip + bulkPreviewStats.couple;
+  const hasPermission = useAuthStore(state => state.hasPermission);
+  const canManageAllCinemas = hasPermission('CINEMA_CREATE') || hasPermission('USER_VIEW');
+  const canCreateRoom = hasPermission('ROOM_CREATE');
+  const canUpdateRoom = hasPermission('ROOM_UPDATE');
+  const canDeleteRoom = hasPermission('ROOM_DELETE');
+  const canCreateSeat = hasPermission('SEAT_CREATE');
+  const canUpdateSeat = hasPermission('SEAT_UPDATE');
+  const canDeleteSeat = hasPermission('SEAT_DELETE');
+  const isScopedStaffView = !canManageAllCinemas && hasPermission('ROOM_VIEW');
 
-  const { data: cinemaPage, isLoading: loadingCinemas } = useQuery({
-    queryKey: ['admin-room-seat-cinemas'],
-    queryFn: () => cinemaApi.getAll({ page: 0, size: 500 }).then(response => response.data.result),
+  const { data: profile, isLoading: loadingProfile } = useQuery({
+    queryKey: ['staff-check-in-profile'],
+    queryFn: () => userApi.getMyProfile().then(response => response.data.result),
+    enabled: isScopedStaffView,
+    staleTime: 60_000,
   });
 
-  const cinemas = useMemo(() => cinemaPage?.content ?? [], [cinemaPage?.content]);
+  const { data: cinemaPage, isLoading: loadingAllCinemas } = useQuery({
+    queryKey: ['admin-room-seat-cinemas'],
+    queryFn: () => cinemaApi.getAll({ page: 0, size: 500 }).then(response => response.data.result),
+    enabled: canManageAllCinemas,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const cinemas = useMemo<Cinema[]>(
+    () => (canManageAllCinemas ? cinemaPage?.content ?? [] : profile?.assignedCinemas ?? []),
+    [canManageAllCinemas, cinemaPage?.content, profile?.assignedCinemas],
+  );
+  const loadingCinemas = canManageAllCinemas ? loadingAllCinemas : loadingProfile;
+  const hasNoAssignedCinema = isScopedStaffView && !loadingCinemas && cinemas.length === 0;
   const cityOptions = useMemo(() => {
     return Array.from(new Set(
       cinemas
@@ -243,10 +269,18 @@ const AdminRoomSeatPage = () => {
   const seatStats = useMemo(() => getSeatStats(seats), [seats]);
 
   const openCreateRoom = () => {
+    if (!canCreateRoom) {
+      toast.error('Ban khong co quyen tao phong chieu.');
+      return;
+    }
     setRoomModal({ open: true, mode: 'create', room: null, name: '' });
   };
 
   const openEditRoom = (room: RoomResponse) => {
+    if (!canUpdateRoom) {
+      toast.error('Ban khong co quyen cap nhat phong chieu.');
+      return;
+    }
     setRoomModal({ open: true, mode: 'edit', room, name: room.name });
   };
 
@@ -259,7 +293,16 @@ const AdminRoomSeatPage = () => {
     }
 
     if (roomModal.mode === 'edit' && roomModal.room) {
+      if (!canUpdateRoom) {
+        toast.error('Ban khong co quyen cap nhat phong chieu.');
+        return;
+      }
       updateRoomMutation.mutate({ id: roomModal.room.id, name });
+      return;
+    }
+
+    if (!canCreateRoom) {
+      toast.error('Ban khong co quyen tao phong chieu.');
       return;
     }
 
@@ -301,6 +344,11 @@ const AdminRoomSeatPage = () => {
             <SummaryCard label="VIP/Couple" value={seatStats.vip + seatStats.couple} />
           </div>
         </div>
+        {hasNoAssignedCinema && (
+          <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+            Tai khoan staff nay chua duoc gan rap phu trach. Vui long lien he admin de duoc phan cong truoc khi quan ly phong va ghe.
+          </div>
+        )}
 
         <div className="grid gap-5 xl:grid-cols-[340px_1fr]">
           <aside className="space-y-5">
@@ -378,10 +426,11 @@ const AdminRoomSeatPage = () => {
                 <div>
                   <h2 className="text-sm font-black uppercase tracking-[0.12em] text-slate-500 dark:text-neutral-500">Phòng chiếu</h2>
                   {selectedCinema && <p className="mt-1 truncate text-xs font-semibold cinema-muted">{selectedCinema.name}</p>}
-                </div>
-                <button type="button" onClick={openCreateRoom} disabled={!selectedCinemaId} className="grid size-9 place-items-center rounded-lg bg-slate-950 text-white disabled:opacity-40 dark:bg-white dark:text-slate-950" title="Thêm phòng">
-                  <Plus size={16} />
-                </button>
+                </div>                {canCreateRoom && (
+                  <button type="button" onClick={openCreateRoom} disabled={!selectedCinemaId} className="grid size-9 place-items-center rounded-lg bg-slate-950 text-white disabled:opacity-40 dark:bg-white dark:text-slate-950" title="ThÃªm phÃ²ng">
+                    <Plus size={16} />
+                  </button>
+                )}
               </div>
 
               <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
@@ -391,10 +440,14 @@ const AdminRoomSeatPage = () => {
                   <div className="rounded-lg border border-dashed border-slate-200 p-5 text-center dark:border-white/10">
                     <DoorOpen className="mx-auto text-slate-300" size={28} />
                     <p className="mt-2 text-sm font-semibold cinema-muted">Rạp này chưa có phòng chiếu.</p>
-                    <button type="button" onClick={openCreateRoom} className="btn-primary mt-3 h-9 px-3 text-xs">
-                      <Plus size={14} />
-                      Tạo phòng
-                    </button>
+                    {canCreateRoom ? (
+                      <button type="button" onClick={openCreateRoom} className="btn-primary mt-3 h-9 px-3 text-xs">
+                        <Plus size={14} />
+                        Táº¡o phÃ²ng
+                      </button>
+                    ) : (
+                      <p className="mt-3 text-xs font-semibold cinema-muted">Staff chi co the xem phong da duoc admin tao.</p>
+                    )}
                   </div>
                 ) : rooms.map(room => (
                   <div
@@ -408,23 +461,28 @@ const AdminRoomSeatPage = () => {
                     <button type="button" onClick={() => { setSelectedRoomId(room.id); setSelectedSeat(null); }} className="w-full text-left">
                       <p className="font-black text-slate-950 dark:text-white">{room.name}</p>
                       <p className="mt-1 text-xs font-semibold cinema-muted">#{room.id.slice(0, 8).toUpperCase()}</p>
-                    </button>
-                    <div className="mt-3 flex gap-2">
-                      <button type="button" onClick={() => openEditRoom(room)} className="btn-ghost !h-8 flex-1 !px-2 !text-xs">
-                        <Edit3 size={13} />
-                        Sửa
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(`Xóa phòng ${room.name}?`)) deleteRoomMutation.mutate(room.id);
-                        }}
-                        className="btn-ghost !h-8 flex-1 !px-2 !text-xs hover:!bg-red-50 hover:!text-red-600 dark:hover:!bg-red-500/10 dark:hover:!text-red-300"
-                      >
-                        <Trash2 size={13} />
-                        Xóa
-                      </button>
-                    </div>
+                    </button>                    {(canUpdateRoom || canDeleteRoom) && (
+                      <div className="mt-3 flex gap-2">
+                        {canUpdateRoom && (
+                          <button type="button" onClick={() => openEditRoom(room)} className="btn-ghost !h-8 flex-1 !px-2 !text-xs">
+                            <Edit3 size={13} />
+                            Sá»­a
+                          </button>
+                        )}
+                        {canDeleteRoom && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`XÃ³a phÃ²ng ${room.name}?`)) deleteRoomMutation.mutate(room.id);
+                            }}
+                            className="btn-ghost !h-8 flex-1 !px-2 !text-xs hover:!bg-red-50 hover:!text-red-600 dark:hover:!bg-red-500/10 dark:hover:!text-red-300"
+                          >
+                            <Trash2 size={13} />
+                            XÃ³a
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -441,13 +499,14 @@ const AdminRoomSeatPage = () => {
                   <p className="mt-1 text-sm cinema-muted">
                     {selectedRoom ? `${selectedCinema?.name ?? ''} · ${seats.length} ghế` : 'Chọn phòng chiếu để xem sơ đồ ghế.'}
                   </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button type="button" disabled={!selectedRoomId} onClick={() => setBulkOpen(true)} className="btn-primary h-10 px-4 disabled:opacity-50">
-                    <Wand2 size={16} />
-                    Sinh ghế
-                  </button>
-                </div>
+                </div>                {canCreateSeat && (
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" disabled={!selectedRoomId} onClick={() => setBulkOpen(true)} className="btn-primary h-10 px-4 disabled:opacity-50">
+                      <Wand2 size={16} />
+                      Sinh gháº¿
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="p-5">
@@ -547,23 +606,31 @@ const AdminRoomSeatPage = () => {
                       <span className="mb-1.5 block text-xs font-black uppercase tracking-[0.12em] text-slate-500">Hệ số giá</span>
                       <input type="number" min="0" step="0.1" value={seatMultiplier} onChange={(event) => setSeatMultiplier(event.target.value)} className="cinema-input" />
                     </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => updateSeatMutation.mutate(selectedSeat)} disabled={updateSeatMutation.isPending} className="btn-primary h-10 px-3 disabled:opacity-50">
-                        {updateSeatMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                        Lưu
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm(`Xóa ghế ${selectedSeat.seatCode}?`)) deleteSeatMutation.mutate(selectedSeat.id);
-                        }}
-                        disabled={deleteSeatMutation.isPending}
-                        className="btn-ghost h-10 px-3 hover:!bg-red-50 hover:!text-red-600 dark:hover:!bg-red-500/10 dark:hover:!text-red-300 disabled:opacity-50"
-                      >
-                        <Trash2 size={15} />
-                        Xóa
-                      </button>
-                    </div>
+                    {(canUpdateSeat || canDeleteSeat) ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {canUpdateSeat && (
+                          <button type="button" onClick={() => updateSeatMutation.mutate(selectedSeat)} disabled={updateSeatMutation.isPending} className="btn-primary h-10 px-3 disabled:opacity-50">
+                            {updateSeatMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
+                            LÆ°u
+                          </button>
+                        )}
+                        {canDeleteSeat && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`XÃ³a gháº¿ ${selectedSeat.seatCode}?`)) deleteSeatMutation.mutate(selectedSeat.id);
+                            }}
+                            disabled={deleteSeatMutation.isPending}
+                            className="btn-ghost h-10 px-3 hover:!bg-red-50 hover:!text-red-600 dark:hover:!bg-red-500/10 dark:hover:!text-red-300 disabled:opacity-50"
+                          >
+                            <Trash2 size={15} />
+                            XÃ³a
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="rounded-xl bg-slate-50 p-3 text-xs font-semibold cinema-muted ring-1 ring-slate-200 dark:bg-neutral-950 dark:ring-white/10">Ban chi co quyen xem thong tin ghe.</p>
+                    )}
                   </div>
                 ) : (
                   <p className="text-sm font-semibold cinema-muted">Chọn một ghế trên sơ đồ để chỉnh loại ghế và hệ số giá.</p>
@@ -574,7 +641,7 @@ const AdminRoomSeatPage = () => {
         </div>
       </div>
 
-      {roomModal.open && (
+      {roomModal.open && (roomModal.mode === 'create' ? canCreateRoom : canUpdateRoom) && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <form onSubmit={submitRoom} className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl ring-1 ring-slate-200 dark:bg-neutral-900 dark:ring-white/10">
             <div className="mb-4 flex items-center justify-between">
@@ -598,7 +665,7 @@ const AdminRoomSeatPage = () => {
         </div>
       )}
 
-      {bulkOpen && (
+      {bulkOpen && canCreateSeat && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
           <form
             onSubmit={(event) => {
