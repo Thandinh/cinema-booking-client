@@ -19,6 +19,17 @@ export interface ResetPasswordRequest {
   confirmPassword: string;
 }
 
+
+export interface AuthSession {
+  id: string;
+  current?: boolean;
+  ipAddress?: string;
+  userAgent?: string;
+  createdAt?: string;
+  expiresAt?: string;
+  revokedAt?: string;
+  revokedReason?: string;
+}
 export interface AuthenticationResult {
   token?: string;
   accessToken?: string;
@@ -48,6 +59,15 @@ export const authApi = {
 
   logout: (token?: string | null, refreshToken?: string | null) =>
     axiosClient.post<ApiResponse<void>>('/auth/logout', { token, refreshToken }, { withCredentials: true }),
+
+  getSessions: () =>
+    axiosClient.get<ApiResponse<AuthSession[]>>('/auth/sessions'),
+
+  revokeSession: (sessionId: string) =>
+    axiosClient.delete<ApiResponse<void>>('/auth/sessions/' + sessionId),
+
+  revokeOtherSessions: () =>
+    axiosClient.delete<ApiResponse<void>>('/auth/sessions/others'),
 
   /** Láº¥y thÃ´ng tin tÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p */
   getMyProfile: (token?: string) =>
