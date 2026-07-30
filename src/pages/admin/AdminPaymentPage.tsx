@@ -28,7 +28,7 @@ import {
 import { formatDateTime, formatMoney } from '../../utils/format';
 
 type PaymentStatusFilter = 'ALL' | 'PENDING' | 'SUCCESS' | 'FAILED' | 'EXPIRED';
-type PaymentMethodFilter = 'ALL' | 'VNPAY' | 'MOMO' | 'CREDIT_CARD' | 'CASH';
+type PaymentMethodFilter = 'ALL' | 'VNPAY' | 'MOMO' | 'SEPAY' | 'CREDIT_CARD' | 'CASH';
 type AdminPaymentTab = 'transactions' | 'reconciliation' | 'events';
 type EventSuccessFilter = 'ALL' | 'true' | 'false';
 
@@ -51,6 +51,7 @@ const METHOD_OPTIONS: { value: PaymentMethodFilter; label: string }[] = [
   { value: 'ALL', label: 'Tất cả cổng' },
   { value: 'VNPAY', label: 'VNPay' },
   { value: 'MOMO', label: 'MoMo' },
+  { value: 'SEPAY', label: 'SePay / VietQR' },
   { value: 'CREDIT_CARD', label: 'Thẻ quốc tế' },
   { value: 'CASH', label: 'Tiền mặt' },
 ];
@@ -86,6 +87,10 @@ const EVENT_TYPE_OPTIONS: PaymentEventType[] = [
   'MOMO_CALLBACK_RECEIVED',
   'MOMO_CALLBACK_INVALID_SIGNATURE',
   'MOMO_AMOUNT_MISMATCH',
+  'SEPAY_WEBHOOK_RECEIVED',
+  'SEPAY_WEBHOOK_INVALID_SIGNATURE',
+  'SEPAY_AMOUNT_MISMATCH',
+  'SEPAY_PAYMENT_NOT_FOUND',
   'PAYMENT_ALREADY_PROCESSED',
   'PAYMENT_SUCCESS',
   'PAYMENT_FAILED',
@@ -103,6 +108,7 @@ const STATUS_META = {
 const METHOD_META: Record<string, { label: string; className: string }> = {
   VNPAY: { label: 'VNPay', className: 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/20' },
   MOMO: { label: 'MoMo', className: 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200 dark:bg-fuchsia-500/10 dark:text-fuchsia-300 dark:ring-fuchsia-500/20' },
+  SEPAY: { label: 'SePay', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20' },
   CREDIT_CARD: { label: 'Thẻ quốc tế', className: 'bg-slate-100 text-slate-700 ring-slate-200 dark:bg-white/10 dark:text-neutral-300 dark:ring-white/10' },
   CASH: { label: 'Tiền mặt', className: 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/20' },
 };
@@ -769,3 +775,4 @@ const formatEventType = (value: string) => value
   .join(' ');
 
 export default AdminPaymentPage;
+

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useQuery } from '@tanstack/react-query';
@@ -7,13 +8,14 @@ import { bookingApi } from '../../api/bookingApi';
 const normalizeStatus = (value: string | null) => {
   if (!value) return 'PENDING';
   const upper = value.toUpperCase();
-  if (upper === '00' || upper === 'SUCCESS' || upper === 'PAID') return 'SUCCESS';
+  if (upper === '00' || upper === '0' || upper === 'SUCCESS' || upper === 'PAID') return 'SUCCESS';
   if (upper === 'EXPIRED') return 'EXPIRED';
   if (upper === 'FAILED' || upper === 'FAIL' || upper === 'CANCELLED') return 'FAILED';
   return upper;
 };
 
 const PaymentResultPage = () => {
+  const resultCardRef = useRef<HTMLElement | null>(null);
   const [params] = useSearchParams();
   const bookingId = params.get('bookingId') || params.get('vnp_TxnRef') || params.get('orderId');
   const status = normalizeStatus(params.get('status') || params.get('vnp_ResponseCode') || params.get('resultCode'));
@@ -35,6 +37,16 @@ const PaymentResultPage = () => {
   });
 
   const ticketCount = booking?.bookingDetails?.filter(detail => detail.ticketQrCode || detail.ticketQrImage).length ?? 0;
+
+  useEffect(() => {
+    window.requestAnimationFrame(() => {
+      resultCardRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    });
+  }, []);
+
   const Icon = isSuccess ? CheckCircle2 : (isFailed || isExpired) ? AlertTriangle : Clock;
   const tone = isSuccess
     ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20'
@@ -65,7 +77,7 @@ const PaymentResultPage = () => {
       </Helmet>
 
       <div className="mx-auto flex min-h-[calc(100vh-56px)] max-w-2xl items-center px-4 py-12 sm:px-6 lg:px-8">
-        <section className="w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-neutral-900 sm:p-8">
+        <section ref={resultCardRef} className="w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-neutral-900 sm:p-8">
           <div className="flex items-start gap-4">
             <div className={`grid size-12 shrink-0 place-items-center rounded-lg border ${tone}`}>
               <Icon size={25} />

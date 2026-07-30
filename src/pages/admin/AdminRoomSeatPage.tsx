@@ -427,7 +427,7 @@ const AdminRoomSeatPage = () => {
                   <h2 className="text-sm font-black uppercase tracking-[0.12em] text-slate-500 dark:text-neutral-500">Phòng chiếu</h2>
                   {selectedCinema && <p className="mt-1 truncate text-xs font-semibold cinema-muted">{selectedCinema.name}</p>}
                 </div>                {canCreateRoom && (
-                  <button type="button" onClick={openCreateRoom} disabled={!selectedCinemaId} className="grid size-9 place-items-center rounded-lg bg-slate-950 text-white disabled:opacity-40 dark:bg-white dark:text-slate-950" title="ThÃªm phÃ²ng">
+                  <button type="button" onClick={openCreateRoom} disabled={!selectedCinemaId} className="grid size-9 place-items-center rounded-lg bg-slate-950 text-white disabled:opacity-40 dark:bg-white dark:text-slate-950" title="Thêm phòng">
                     <Plus size={16} />
                   </button>
                 )}
@@ -443,7 +443,7 @@ const AdminRoomSeatPage = () => {
                     {canCreateRoom ? (
                       <button type="button" onClick={openCreateRoom} className="btn-primary mt-3 h-9 px-3 text-xs">
                         <Plus size={14} />
-                        Táº¡o phÃ²ng
+                        Tạo phòng
                       </button>
                     ) : (
                       <p className="mt-3 text-xs font-semibold cinema-muted">Staff chi co the xem phong da duoc admin tao.</p>
@@ -466,19 +466,19 @@ const AdminRoomSeatPage = () => {
                         {canUpdateRoom && (
                           <button type="button" onClick={() => openEditRoom(room)} className="btn-ghost !h-8 flex-1 !px-2 !text-xs">
                             <Edit3 size={13} />
-                            Sá»­a
+                            Sửa
                           </button>
                         )}
                         {canDeleteRoom && (
                           <button
                             type="button"
                             onClick={() => {
-                              if (window.confirm(`XÃ³a phÃ²ng ${room.name}?`)) deleteRoomMutation.mutate(room.id);
+                              if (window.confirm(`Xóa phòng ${room.name}?`)) deleteRoomMutation.mutate(room.id);
                             }}
                             className="btn-ghost !h-8 flex-1 !px-2 !text-xs hover:!bg-red-50 hover:!text-red-600 dark:hover:!bg-red-500/10 dark:hover:!text-red-300"
                           >
                             <Trash2 size={13} />
-                            XÃ³a
+                            Xóa
                           </button>
                         )}
                       </div>
@@ -503,7 +503,7 @@ const AdminRoomSeatPage = () => {
                   <div className="flex flex-wrap gap-2">
                     <button type="button" disabled={!selectedRoomId} onClick={() => setBulkOpen(true)} className="btn-primary h-10 px-4 disabled:opacity-50">
                       <Wand2 size={16} />
-                      Sinh gháº¿
+                      Sinh ghế
                     </button>
                   </div>
                 )}
@@ -611,20 +611,20 @@ const AdminRoomSeatPage = () => {
                         {canUpdateSeat && (
                           <button type="button" onClick={() => updateSeatMutation.mutate(selectedSeat)} disabled={updateSeatMutation.isPending} className="btn-primary h-10 px-3 disabled:opacity-50">
                             {updateSeatMutation.isPending ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-                            LÆ°u
+                            Lưu
                           </button>
                         )}
                         {canDeleteSeat && (
                           <button
                             type="button"
                             onClick={() => {
-                              if (window.confirm(`XÃ³a gháº¿ ${selectedSeat.seatCode}?`)) deleteSeatMutation.mutate(selectedSeat.id);
+                              if (window.confirm(`Xóa ghế ${selectedSeat.seatCode}?`)) deleteSeatMutation.mutate(selectedSeat.id);
                             }}
                             disabled={deleteSeatMutation.isPending}
                             className="btn-ghost h-10 px-3 hover:!bg-red-50 hover:!text-red-600 dark:hover:!bg-red-500/10 dark:hover:!text-red-300 disabled:opacity-50"
                           >
                             <Trash2 size={15} />
-                            XÃ³a
+                            Xóa
                           </button>
                         )}
                       </div>

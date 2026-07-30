@@ -69,7 +69,7 @@ export const authApi = {
   revokeOtherSessions: () =>
     axiosClient.delete<ApiResponse<void>>('/auth/sessions/others'),
 
-  /** Láº¥y thÃ´ng tin tÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p */
+  /** Lấy thông tin tài khoản đang đăng nhập */
   getMyProfile: (token?: string) =>
     axiosClient.get<ApiResponse<UserInfo & { email?: string; phone?: string }>>('/api/v1/users/me', {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
@@ -91,7 +91,7 @@ export const authApi = {
     axiosClient.post<ApiResponse<void>>('/api/v1/users/reset-password', data),
 };
 
-/** Äá»c token tá»« localStorage */
+/** Đọc token từ localStorage */
 export const getStoredToken = (): string | null =>
   localStorage.getItem(LS_KEYS.ACCESS_TOKEN);
 

@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Calendar, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Ban, Calendar, Loader2, Plus, Trash2, X } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
 import { movieApi } from '../../api/movieApi';
 import { cinemaApi } from '../../api/cinemaApi';
@@ -21,6 +21,8 @@ const showtimeAdminApi = {
     axiosClient.post<ApiResponse<Showtime>>('/api/v1/showtimes', data),
   update: (id: string, data: Record<string, unknown>) =>
     axiosClient.put<ApiResponse<Showtime>>(`/api/v1/showtimes/${id}`, data),
+  cancel: (id: string, reason: string) =>
+    axiosClient.post<ApiResponse<Showtime>>(`/api/v1/showtimes/${id}/cancel`, { reason }),
   delete: (id: string) =>
     axiosClient.delete<ApiResponse<void>>(`/api/v1/showtimes/${id}`),
 };
@@ -54,6 +56,7 @@ const showtimeSchema = z.object({
   basePrice: z.coerce.number().min(1000, 'Giá phải lớn hơn 1.000đ'),
 });
 type ShowtimeFormData = z.infer<typeof showtimeSchema>;
+type CancelTarget = Pick<Showtime, 'id' | 'movieTitle' | 'cinemaName' | 'roomName' | 'startTime'>;
 
 const ShowtimeFormModal = ({
   isOpen, onClose, onSubmit, isSubmitting,
@@ -280,10 +283,94 @@ const ShowtimeFormModal = ({
   );
 };
 
+const ShowtimeCancelModal = ({
+  showtime, onClose, onConfirm, isSubmitting,
+}: {
+  showtime: CancelTarget | null;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+  isSubmitting: boolean;
+}) => {
+  const [reason, setReason] = useState('');
+
+  useEffect(() => {
+    setReason('');
+  }, [showtime?.id]);
+
+  if (!showtime) return null;
+
+  const trimmedReason = reason.trim();
+  const canSubmit = trimmedReason.length > 0 && trimmedReason.length <= 500;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl dark:bg-neutral-900">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-6 py-5 dark:border-white/10">
+          <div>
+            <h2 className="text-xl font-black text-slate-950 dark:text-white">Hủy suất chiếu</h2>
+            <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-neutral-400">
+              Vé đã thanh toán sẽ được ghi nhận cần hoàn tiền thủ công và gửi email thông báo cho khách.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-5 px-6 py-5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-neutral-950">
+            <p className="font-black text-slate-950 dark:text-white">{showtime.movieTitle}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-600 dark:text-neutral-300">
+              {showtime.cinemaName} - {showtime.roomName}
+            </p>
+            <p className="mt-1 text-sm cinema-muted">{formatDateTime(showtime.startTime)}</p>
+          </div>
+
+          <div>
+            <label className="cinema-label mb-2 block">Lý do hủy *</label>
+            <textarea
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              rows={4}
+              maxLength={500}
+              className="cinema-input min-h-28 resize-y"
+              placeholder="Ví dụ: Rạp bảo trì phòng chiếu, suất chiếu được hủy và khách sẽ được hỗ trợ hoàn tiền."
+            />
+            <div className="mt-2 flex items-center justify-between gap-3 text-xs font-semibold">
+              <span className={trimmedReason ? 'text-slate-500 dark:text-neutral-400' : 'text-red-500'}>
+                Lý do sẽ hiển thị trong email gửi cho khách.
+              </span>
+              <span className="text-slate-400">{reason.length}/500</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-slate-100 px-6 py-5 dark:border-white/10">
+          <button type="button" onClick={onClose} className="btn-ghost">Đóng</button>
+          <button
+            type="button"
+            disabled={!canSubmit || isSubmitting}
+            onClick={() => onConfirm(trimmedReason)}
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-red-600 px-5 text-sm font-black text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Ban size={16} />}
+            Xác nhận hủy suất
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const AdminShowtimePage = () => {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin-showtimes', page],
@@ -312,12 +399,37 @@ const AdminShowtimePage = () => {
     onError: () => toast.error('Không thể xóa, suất chiếu có thể đã có người đặt vé'),
   });
 
+  const cancelMutation = useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => showtimeAdminApi.cancel(id, reason),
+    onSuccess: () => {
+      toast.success('Đã hủy suất chiếu và ghi nhận các đơn cần xử lý');
+      setCancelTarget(null);
+      queryClient.invalidateQueries({ queryKey: ['admin-showtimes'] });
+      queryClient.invalidateQueries({ queryKey: ['staff-assigned-cinema-open-showtimes'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-bookings'] });
+    },
+    onError: (e: any) => {
+      const message = String(e?.response?.data?.message ?? '');
+      if (message.includes('checked-in')) {
+        toast.error('Suất chiếu đã có vé check-in, cần xử lý sự cố thủ công.');
+        return;
+      }
+      if (message.includes('Only upcoming or ongoing')) {
+        toast.error('Chỉ có thể hủy suất sắp chiếu hoặc đang chiếu.');
+        return;
+      }
+      toast.error(message || 'Không thể hủy suất chiếu. Vui lòng thử lại.');
+    },
+  });
+
   const showtimes: Showtime[] = (data as any)?.content ?? [];
 
   const statusBadge = (s: string) => {
     if (s === 'UPCOMING') return <span className="badge-brand">Sắp chiếu</span>;
     if (s === 'ONGOING') return <span className="badge-success">Đang chiếu</span>;
     if (s === 'ENDED') return <span className="badge-neutral">Đã kết thúc</span>;
+    if (s === 'CANCELLED') return <span className="badge-warning">Đã hủy</span>;
     return <span className="badge-warning">{s}</span>;
   };
 
@@ -346,7 +458,7 @@ const AdminShowtimePage = () => {
                   <th className="px-6 py-4">Thời gian</th>
                   <th className="px-6 py-4">Giá vé</th>
                   <th className="px-6 py-4">Trạng thái</th>
-                  <th className="px-6 py-4 text-right">Xóa</th>
+                  <th className="px-6 py-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
@@ -381,13 +493,33 @@ const AdminShowtimePage = () => {
                       {formatMoney(st.basePrice ?? 0)}
                     </td>
                     <td className="px-6 py-4">{statusBadge(st.status)}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => { if (window.confirm('Xóa suất chiếu này?')) deleteMutation.mutate(st.id); }}
-                        className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-end gap-2">
+                        {(st.status === 'UPCOMING' || st.status === 'ONGOING') && (
+                          <button
+                            type="button"
+                            onClick={() => setCancelTarget({
+                              id: st.id,
+                              movieTitle: st.movieTitle,
+                              cinemaName: st.cinemaName,
+                              roomName: st.roomName,
+                              startTime: st.startTime,
+                            })}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-black text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-500/10"
+                          >
+                            <Ban size={14} />
+                            Hủy suất
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => { if (window.confirm('Xóa suất chiếu này? Chỉ dùng khi suất chưa có đơn đặt vé.')) deleteMutation.mutate(st.id); }}
+                          className="grid size-8 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                          title="Xóa dữ liệu suất chiếu chưa phát sinh booking"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -412,6 +544,16 @@ const AdminShowtimePage = () => {
         onClose={() => setIsModalOpen(false)}
         onSubmit={(d) => createMutation.mutate(d)}
         isSubmitting={createMutation.isPending}
+      />
+
+      <ShowtimeCancelModal
+        showtime={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={(reason) => {
+          if (!cancelTarget) return;
+          cancelMutation.mutate({ id: cancelTarget.id, reason });
+        }}
+        isSubmitting={cancelMutation.isPending}
       />
     </>
   );

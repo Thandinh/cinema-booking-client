@@ -124,7 +124,7 @@ export interface BookingResponse {
 
 export interface PaymentInitiateRequest {
   bookingId: string;
-  method: 'VNPAY' | 'MOMO' | 'CREDIT_CARD';
+  method: 'VNPAY' | 'MOMO' | 'SEPAY' | 'CREDIT_CARD';
   amount: number;
 }
 
@@ -224,5 +224,6 @@ export interface ShowtimeStatsResponse {
   occupancyRate: number;
   revenue: number;
 }
+
 
 
