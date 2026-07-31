@@ -201,8 +201,11 @@ const MyBookingsPage = () => {
               const pendingExpired = booking.status === 'PENDING' && remainingSeconds === 0;
               const canPay = booking.status === 'PENDING' && !pendingExpired;
               const isRetryableStatus = ['FAILED', 'EXPIRED', 'CANCELLED'].includes(booking.status);
-              const canRetry = (isRetryableStatus || pendingExpired) && isFutureShowtime(booking.startTime);
-              const showtimePassed = (isRetryableStatus || pendingExpired) && !canRetry;
+              const showtimeCancelled = booking.showtimeStatus === 'CANCELLED';
+              const hasIssuedTickets = (booking.bookingDetails ?? []).some(detail => Boolean(detail.ticketId));
+              const needsRefundHandling = showtimeCancelled && booking.status === 'CANCELLED' && hasIssuedTickets;
+              const canRetry = !showtimeCancelled && (isRetryableStatus || pendingExpired) && isFutureShowtime(booking.startTime);
+              const showtimePassed = !showtimeCancelled && (isRetryableStatus || pendingExpired) && !canRetry;
 
               return (
                 <article
@@ -246,6 +249,14 @@ const MyBookingsPage = () => {
                             </span>
                           </span>
                         </div>
+
+                        {showtimeCancelled && (
+                          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
+                            {needsRefundHandling
+                              ? 'Suất chiếu đã hủy. Đơn của bạn đang được rạp xử lý hoàn tiền.'
+                              : 'Suất chiếu đã hủy. Đơn chưa thanh toán nên bạn không cần thao tác thêm.'}
+                          </div>
+                        )}
                       </div>
 
                       {/* Right: price + actions */}
@@ -281,6 +292,11 @@ const MyBookingsPage = () => {
                           {showtimePassed && (
                             <span className="inline-flex h-9 items-center rounded-lg bg-slate-100 px-4 text-xs font-black text-slate-500 dark:bg-white/5 dark:text-neutral-400">
                               Suất chiếu đã qua
+                            </span>
+                          )}
+                          {showtimeCancelled && (
+                            <span className="inline-flex h-9 items-center rounded-lg bg-amber-50 px-4 text-xs font-black text-amber-700 ring-1 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/20">
+                              {needsRefundHandling ? 'Đang xử lý hoàn tiền' : 'Suất chiếu đã hủy'}
                             </span>
                           )}
                           <Link

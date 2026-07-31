@@ -108,6 +108,7 @@ export interface BookingResponse {
   customerName?: string;
   customerEmail?: string;
   showtimeId: string;
+  showtimeStatus?: string;
   movieTitle: string;
   cinemaName: string;
   cinemaAddress?: string;

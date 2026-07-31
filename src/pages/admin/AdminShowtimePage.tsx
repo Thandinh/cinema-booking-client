@@ -376,6 +376,7 @@ const AdminShowtimePage = () => {
     queryKey: ['admin-showtimes', page],
     queryFn: () => showtimeAdminApi.getAll({ page, size: 15, sort: 'startTime,asc' }).then(r => r.data.result),
     placeholderData: (prev) => prev,
+    refetchInterval: 60_000,
   });
 
   const createMutation = useMutation({
