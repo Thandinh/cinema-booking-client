@@ -46,12 +46,17 @@ const AdminBookingPage = () => {
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState<BookingStatus>('ALL');
   const [keyword, setKeyword] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['admin-bookings', status, page],
+    queryKey: ['admin-bookings', status, keyword, fromDate, toDate, page],
     queryFn: () =>
       bookingApi.getAllBookings({
         status: status === 'ALL' ? undefined : status,
+        keyword: keyword.trim() || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
         page,
         size: 15,
         sort: 'createdAt,desc',
@@ -109,7 +114,10 @@ const AdminBookingPage = () => {
               <Search size={16} className="text-slate-400" />
               <input
                 value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
+                onChange={(event) => {
+                  setKeyword(event.target.value);
+                  setPage(0);
+                }}
                 placeholder="Tìm mã đơn, khách, phim, ghế..."
                 className="h-10 w-full bg-transparent text-sm font-semibold text-slate-950 outline-none placeholder:text-slate-400 dark:text-white"
               />
@@ -117,7 +125,8 @@ const AdminBookingPage = () => {
           </div>
         </div>
 
-        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+        <div className="mb-5 space-y-3">
+          <div className="flex gap-2 overflow-x-auto pb-1">
           {STATUS_OPTIONS.map((option) => (
             <button
               key={option.value}
@@ -131,6 +140,25 @@ const AdminBookingPage = () => {
               {option.label}
             </button>
           ))}
+          </div>
+
+          <div className="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-neutral-900 sm:grid-cols-[1fr_1fr_auto]">
+            <DateInput label="Từ ngày" value={fromDate} max={toDate || undefined} onChange={(value) => { setFromDate(value); setPage(0); }} />
+            <DateInput label="Đến ngày" value={toDate} min={fromDate || undefined} onChange={(value) => { setToDate(value); setPage(0); }} />
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('ALL');
+                setKeyword('');
+                setFromDate('');
+                setToDate('');
+                setPage(0);
+              }}
+              className="btn-ghost h-10 self-end px-4 text-xs"
+            >
+              Xóa lọc
+            </button>
+          </div>
         </div>
 
         <div className="cinema-card overflow-hidden">
@@ -311,5 +339,33 @@ const AdminBookingPage = () => {
     </>
   );
 };
+
+const DateInput = ({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  min?: string;
+  max?: string;
+  onChange: (value: string) => void;
+}) => (
+  <label className="block">
+    <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:text-neutral-500">
+      {label}
+    </span>
+    <input
+      type="date"
+      value={value}
+      min={min}
+      max={max}
+      onChange={(event) => onChange(event.target.value)}
+      className="cinema-input h-10 py-0"
+    />
+  </label>
+);
 
 export default AdminBookingPage;

@@ -25,6 +25,8 @@ export const auditLogApi = {
     resource?: string;
     success?: boolean;
     keyword?: string;
+    fromDate?: string;
+    toDate?: string;
     page?: number;
     size?: number;
     sort?: string;

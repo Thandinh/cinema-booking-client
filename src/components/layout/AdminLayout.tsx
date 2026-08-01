@@ -33,7 +33,7 @@ const adminManagementItems: NavItem[] = [
   { to: '/admin/cinemas', label: 'Rạp chiếu', icon: Building2, permission: 'CINEMA_CREATE' },
   { to: '/admin/rooms', label: 'Phòng & ghế', icon: DoorOpen, permission: 'ROOM_CREATE' },
   { to: '/admin/users', label: 'Người dùng', icon: Users, permission: 'USER_VIEW' },
-  { to: '/admin/promotions', label: 'Khuyến mãi', icon: Gift, permission: 'PROMOTION_CREATE' },
+  { to: '/admin/promotions', label: 'Khuyến mãi', icon: Gift, permission: 'PROMOTION_VIEW' },
   { to: '/admin/audit-logs', label: 'Nhật ký', icon: ShieldCheck, permission: 'AUDIT_VIEW' },
 ];
 

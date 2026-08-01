@@ -89,6 +89,8 @@ export const paymentApi = {
     status?: string;
     method?: string;
     keyword?: string;
+    fromDate?: string;
+    toDate?: string;
     page?: number;
     size?: number;
     sort?: string;
@@ -102,6 +104,8 @@ export const paymentApi = {
     eventType?: PaymentEventType;
     success?: boolean;
     keyword?: string;
+    fromDate?: string;
+    toDate?: string;
     page?: number;
     size?: number;
     sort?: string;

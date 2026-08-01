@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Ban, Calendar, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Ban, Calendar, Loader2, Plus, RotateCcw, Search, Trash2, X } from 'lucide-react';
 import axiosClient from '../../api/axiosClient';
 import { movieApi } from '../../api/movieApi';
 import { cinemaApi } from '../../api/cinemaApi';
@@ -14,8 +14,18 @@ import type { Cinema, Showtime, Movie } from '../../types/domain.types';
 import { toast } from '../../components/ui/toastBus';
 import { formatDateTime, formatMoney, formatTime } from '../../utils/format';
 
+type ShowtimeAdminFilters = {
+  fromDate?: string;
+  toDate?: string;
+  city?: string;
+  cinemaId?: string;
+  roomId?: string;
+  status?: string;
+  keyword?: string;
+};
+
 const showtimeAdminApi = {
-  getAll: (params?: { page?: number; size?: number; sort?: string }) =>
+  getAll: (params?: ShowtimeAdminFilters & { page?: number; size?: number; sort?: string }) =>
     axiosClient.get<ApiResponse<PageResult<Showtime>>>('/api/v1/showtimes', { params }),
   create: (data: Record<string, unknown>) =>
     axiosClient.post<ApiResponse<Showtime>>('/api/v1/showtimes', data),
@@ -44,6 +54,19 @@ const hasRole = (roles: unknown[] | undefined, roleName: string) =>
 const toDateTimeLocalValue = (date: Date) => {
   const localOffsetMs = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - localOffsetMs).toISOString().slice(0, 16);
+};
+
+const toDateInputValue = (date: Date) => {
+  const localOffsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - localOffsetMs).toISOString().slice(0, 10);
+};
+
+const todayDateInput = () => toDateInputValue(new Date());
+
+const plusDaysDateInput = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return toDateInputValue(date);
 };
 
 const showtimeSchema = z.object({
@@ -371,10 +394,103 @@ const AdminShowtimePage = () => {
   const [page, setPage] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cancelTarget, setCancelTarget] = useState<CancelTarget | null>(null);
+  const [fromDate, setFromDate] = useState(() => todayDateInput());
+  const [toDate, setToDate] = useState(() => plusDaysDateInput(7));
+  const [city, setCity] = useState('');
+  const [cinemaId, setCinemaId] = useState('');
+  const [roomId, setRoomId] = useState('');
+  const [status, setStatus] = useState('');
+  const [keywordInput, setKeywordInput] = useState('');
+  const [keyword, setKeyword] = useState('');
+
+  const currentUserQuery = useQuery({
+    queryKey: ['admin-showtime-profile'],
+    queryFn: () => userApi.getMyProfile().then(r => r.data.result),
+    staleTime: 60_000,
+  });
+
+  const currentUser = currentUserQuery.data;
+  const isAdminAccount = hasRole(currentUser?.roles as unknown[] | undefined, 'ADMIN');
+
+  const { data: allCinemasData, isLoading: isLoadingAllCinemas } = useQuery({
+    queryKey: ['admin-showtime-cinemas-filter'],
+    queryFn: () => cinemaApi.getMapData().then(r => r.data.result),
+    enabled: isAdminAccount,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const scopedCinemas = useMemo<Cinema[]>(
+    () => (isAdminAccount ? allCinemasData ?? [] : currentUser?.assignedCinemas ?? []),
+    [allCinemasData, currentUser?.assignedCinemas, isAdminAccount],
+  );
+
+  const cities = useMemo(() => {
+    const values = scopedCinemas
+      .map(cinema => cinema.city?.trim())
+      .filter((value): value is string => Boolean(value));
+    return Array.from(new Set(values)).sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [scopedCinemas]);
+
+  const filterCinemas = useMemo(() => {
+    const source = city ? scopedCinemas.filter(cinema => cinema.city === city) : scopedCinemas;
+    return [...source].sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+  }, [city, scopedCinemas]);
+
+  const { data: filterRoomsData } = useQuery({
+    queryKey: ['admin-showtime-filter-rooms', cinemaId],
+    queryFn: () => roomApi.getByCinema(cinemaId).then(r => r.data.result),
+    enabled: Boolean(cinemaId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setKeyword(keywordInput.trim()), 350);
+    return () => window.clearTimeout(timer);
+  }, [keywordInput]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [fromDate, toDate, city, cinemaId, roomId, status, keyword]);
+
+  useEffect(() => {
+    setCinemaId('');
+    setRoomId('');
+  }, [city]);
+
+  useEffect(() => {
+    setRoomId('');
+  }, [cinemaId]);
+
+  const filterParams = useMemo<ShowtimeAdminFilters>(() => ({
+    fromDate: fromDate || undefined,
+    toDate: toDate || undefined,
+    city: city || undefined,
+    cinemaId: cinemaId || undefined,
+    roomId: roomId || undefined,
+    status: status || undefined,
+    keyword: keyword || undefined,
+  }), [cinemaId, city, fromDate, keyword, roomId, status, toDate]);
+
+  const activeFilterCount = useMemo(
+    () => Object.values(filterParams).filter(Boolean).length,
+    [filterParams],
+  );
+
+  const resetFilters = () => {
+    setFromDate('');
+    setToDate('');
+    setCity('');
+    setCinemaId('');
+    setRoomId('');
+    setStatus('');
+    setKeywordInput('');
+    setKeyword('');
+    setPage(0);
+  };
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['admin-showtimes', page],
-    queryFn: () => showtimeAdminApi.getAll({ page, size: 15, sort: 'startTime,asc' }).then(r => r.data.result),
+    queryKey: ['admin-showtimes', page, filterParams],
+    queryFn: () => showtimeAdminApi.getAll({ ...filterParams, page, size: 15, sort: 'startTime,asc' }).then(r => r.data.result),
     placeholderData: (prev) => prev,
     refetchInterval: 60_000,
   });
@@ -427,11 +543,36 @@ const AdminShowtimePage = () => {
   const showtimes: Showtime[] = (data as any)?.content ?? [];
 
   const statusBadge = (s: string) => {
-    if (s === 'UPCOMING') return <span className="badge-brand">Sắp chiếu</span>;
-    if (s === 'ONGOING') return <span className="badge-success">Đang chiếu</span>;
-    if (s === 'ENDED') return <span className="badge-neutral">Đã kết thúc</span>;
-    if (s === 'CANCELLED') return <span className="badge-warning">Đã hủy</span>;
-    return <span className="badge-warning">{s}</span>;
+    const baseClass = 'inline-flex items-center rounded-full px-3 py-1 text-xs font-black ring-1';
+    if (s === 'UPCOMING') {
+      return (
+        <span className={`${baseClass} bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-200 dark:ring-sky-400/25`}>
+          Sắp chiếu
+        </span>
+      );
+    }
+    if (s === 'ONGOING') {
+      return (
+        <span className={`${baseClass} bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-200 dark:ring-emerald-400/25`}>
+          Đang chiếu
+        </span>
+      );
+    }
+    if (s === 'ENDED') {
+      return (
+        <span className={`${baseClass} bg-slate-100 text-slate-700 ring-slate-300 dark:bg-neutral-800 dark:text-neutral-200 dark:ring-white/15`}>
+          Đã kết thúc
+        </span>
+      );
+    }
+    if (s === 'CANCELLED') {
+      return (
+        <span className={`${baseClass} bg-red-50 text-red-700 ring-red-200 dark:bg-red-500/10 dark:text-red-200 dark:ring-red-400/25`}>
+          Đã hủy
+        </span>
+      );
+    }
+    return <span className={`${baseClass} bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:ring-amber-400/25`}>{s}</span>;
   };
 
   return (
@@ -447,6 +588,129 @@ const AdminShowtimePage = () => {
           <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
             <Plus size={16} /> Tạo suất chiếu
           </button>
+        </div>
+
+        <div className="cinema-card mb-5 p-4">
+          <div className="mb-4 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+            <div>
+              <h2 className="text-sm font-black uppercase tracking-[0.16em] text-slate-500 dark:text-neutral-400">
+                Bộ lọc suất chiếu
+              </h2>
+              <p className="mt-1 text-xs font-semibold cinema-muted">
+                Lọc theo ngày, rạp, phòng, trạng thái hoặc tên phim để vận hành nhanh hơn.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFromDate(todayDateInput());
+                  setToDate(todayDateInput());
+                }}
+                className="btn-ghost !h-9 !px-3 !text-xs"
+              >
+                Hôm nay
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFromDate(todayDateInput());
+                  setToDate(plusDaysDateInput(7));
+                }}
+                className="btn-ghost !h-9 !px-3 !text-xs"
+              >
+                7 ngày tới
+              </button>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="btn-secondary !h-9 !px-3 !text-xs"
+              >
+                <RotateCcw size={13} />
+                Đặt lại{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-[1.1fr_1.1fr_1fr_1.3fr_1.3fr_1.2fr_1.6fr]">
+            <div>
+              <label className="cinema-label mb-2 block">Từ ngày</label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(event) => setFromDate(event.target.value)}
+                className="cinema-input"
+              />
+            </div>
+            <div>
+              <label className="cinema-label mb-2 block">Đến ngày</label>
+              <input
+                type="date"
+                value={toDate}
+                min={fromDate || undefined}
+                onChange={(event) => setToDate(event.target.value)}
+                className="cinema-input"
+              />
+            </div>
+            <div>
+              <label className="cinema-label mb-2 block">Trạng thái</label>
+              <select value={status} onChange={(event) => setStatus(event.target.value)} className="cinema-input">
+                <option value="">Tất cả</option>
+                <option value="UPCOMING">Sắp chiếu</option>
+                <option value="ONGOING">Đang chiếu</option>
+                <option value="ENDED">Đã kết thúc</option>
+                <option value="CANCELLED">Đã hủy</option>
+              </select>
+            </div>
+            <div>
+              <label className="cinema-label mb-2 block">Thành phố</label>
+              <select
+                value={city}
+                onChange={(event) => setCity(event.target.value)}
+                className="cinema-input"
+                disabled={currentUserQuery.isLoading || (isAdminAccount && isLoadingAllCinemas)}
+              >
+                <option value="">Tất cả thành phố</option>
+                {cities.map(item => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="cinema-label mb-2 block">Rạp</label>
+              <select
+                value={cinemaId}
+                onChange={(event) => setCinemaId(event.target.value)}
+                className="cinema-input"
+                disabled={currentUserQuery.isLoading || filterCinemas.length === 0}
+              >
+                <option value="">Tất cả rạp</option>
+                {filterCinemas.map(cinema => <option key={cinema.id} value={cinema.id}>{cinema.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="cinema-label mb-2 block">Phòng</label>
+              <select
+                value={roomId}
+                onChange={(event) => setRoomId(event.target.value)}
+                className="cinema-input"
+                disabled={!cinemaId}
+              >
+                <option value="">Tất cả phòng</option>
+                {(filterRoomsData ?? []).map(room => <option key={room.id} value={room.id}>{room.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="cinema-label mb-2 block">Tìm phim</label>
+              <div className="relative">
+                <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={keywordInput}
+                  onChange={(event) => setKeywordInput(event.target.value)}
+                  className="cinema-input pl-9"
+                  placeholder="Nhập tên phim..."
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="cinema-card overflow-hidden">

@@ -133,7 +133,7 @@ const AppRouter = () => (
         <Route
           path="/admin/promotions"
           element={
-            <ProtectedRoute permission="PROMOTION_CREATE">
+            <ProtectedRoute permission="PROMOTION_VIEW">
               <AdminPromotionPage />
             </ProtectedRoute>
           }

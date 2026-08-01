@@ -119,14 +119,18 @@ const AdminPaymentPage = () => {
   const [status, setStatus] = useState<PaymentStatusFilter>('ALL');
   const [method, setMethod] = useState<PaymentMethodFilter>('ALL');
   const [keyword, setKeyword] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const paymentsQuery = useQuery({
-    queryKey: ['admin-payments', status, method, keyword, page],
+    queryKey: ['admin-payments', status, method, keyword, fromDate, toDate, page],
     queryFn: () =>
       paymentApi.getAllPayments({
         status: status === 'ALL' ? undefined : status,
         method: method === 'ALL' ? undefined : method,
         keyword: keyword.trim() || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
         page,
         size: 15,
         sort: 'createdAt,desc',
@@ -198,7 +202,7 @@ const AdminPaymentPage = () => {
           <section className="cinema-card overflow-hidden">
             <div className="space-y-4 border-b border-slate-100 p-5 dark:border-white/5">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-lg bg-slate-100 px-4 ring-1 ring-slate-200 dark:bg-neutral-950 dark:ring-white/10 xl:max-w-lg">
+              <div className="flex h-11 min-w-0 flex-1 items-center gap-3 rounded-lg bg-slate-100 px-4 ring-1 ring-slate-200 dark:bg-neutral-950 dark:ring-white/10 xl:max-w-lg">
                   <Search size={16} className="shrink-0 text-slate-400" />
                   <input
                     type="text"
@@ -237,6 +241,21 @@ const AdminPaymentPage = () => {
                   </button>
                 </div>
               </div>
+
+              <DateRangeFilter
+                fromDate={fromDate}
+                toDate={toDate}
+                onFromDateChange={(value) => { setFromDate(value); setPage(0); }}
+                onToDateChange={(value) => { setToDate(value); setPage(0); }}
+                onReset={() => {
+                  setStatus('ALL');
+                  setMethod('ALL');
+                  setKeyword('');
+                  setFromDate('');
+                  setToDate('');
+                  setPage(0);
+                }}
+              />
 
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {STATUS_OPTIONS.map(option => (
@@ -424,14 +443,18 @@ const PaymentEventsPanel = () => {
   const [keyword, setKeyword] = useState('');
   const [eventType, setEventType] = useState<'ALL' | PaymentEventType>('ALL');
   const [success, setSuccess] = useState<EventSuccessFilter>('ALL');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const eventsQuery = useQuery({
-    queryKey: ['payment-events', keyword, eventType, success, page],
+    queryKey: ['payment-events', keyword, eventType, success, fromDate, toDate, page],
     queryFn: () =>
       paymentApi.getPaymentEvents({
         keyword: keyword.trim() || undefined,
         eventType: eventType === 'ALL' ? undefined : eventType,
         success: success === 'ALL' ? undefined : success === 'true',
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
         page,
         size: 12,
         sort: 'createdAt,desc',
@@ -502,6 +525,21 @@ const PaymentEventsPanel = () => {
             <option value="false">Có lỗi</option>
           </select>
         </div>
+
+        <DateRangeFilter
+          fromDate={fromDate}
+          toDate={toDate}
+          onFromDateChange={(value) => { setFromDate(value); setPage(0); }}
+          onToDateChange={(value) => { setToDate(value); setPage(0); }}
+          onReset={() => {
+            setKeyword('');
+            setEventType('ALL');
+            setSuccess('ALL');
+            setFromDate('');
+            setToDate('');
+            setPage(0);
+          }}
+        />
       </div>
 
       <div className="p-5">
@@ -546,6 +584,50 @@ const PaymentEventsPanel = () => {
     </section>
   );
 };
+
+const DateRangeFilter = ({
+  fromDate,
+  toDate,
+  onFromDateChange,
+  onToDateChange,
+  onReset,
+}: {
+  fromDate: string;
+  toDate: string;
+  onFromDateChange: (value: string) => void;
+  onToDateChange: (value: string) => void;
+  onReset: () => void;
+}) => (
+  <div className="grid gap-3 rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-neutral-950 dark:ring-white/10 sm:grid-cols-[1fr_1fr_auto]">
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:text-neutral-500">
+        Từ ngày
+      </span>
+      <input
+        type="date"
+        value={fromDate}
+        max={toDate || undefined}
+        onChange={(event) => onFromDateChange(event.target.value)}
+        className="cinema-input h-10 py-0"
+      />
+    </label>
+    <label className="block">
+      <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:text-neutral-500">
+        Đến ngày
+      </span>
+      <input
+        type="date"
+        value={toDate}
+        min={fromDate || undefined}
+        onChange={(event) => onToDateChange(event.target.value)}
+        className="cinema-input h-10 py-0"
+      />
+    </label>
+    <button type="button" onClick={onReset} className="btn-ghost h-10 self-end px-4 text-xs">
+      Xóa lọc
+    </button>
+  </div>
+);
 
 const PaymentRow = ({ payment }: { payment: PaymentResponse }) => {
   const statusMeta = STATUS_META[payment.status as keyof typeof STATUS_META] ?? STATUS_META.FAILED;

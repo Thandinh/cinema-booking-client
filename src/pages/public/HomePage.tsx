@@ -36,6 +36,15 @@ const groupCinemasByCity = (cinemas: CinemaMapItem[]) =>
     return acc;
   }, {});
 
+const normalizeSearchText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .toLowerCase()
+    .trim();
+
 const HomePage = () => {
   const [activeTab, setActiveTab] = useState<TabType>('NOW_SHOWING');
   const [search, setSearch] = useState('');
@@ -89,9 +98,9 @@ const HomePage = () => {
       ? DEFAULT_CITY
       : cinemaCityOptions[0] ?? '';
   const filteredCinemaCityOptions = useMemo(() => {
-    const keyword = citySearch.trim().toLowerCase();
+    const keyword = normalizeSearchText(citySearch);
     if (!keyword) return cinemaCityOptions;
-    return cinemaCityOptions.filter(city => city.toLowerCase().includes(keyword));
+    return cinemaCityOptions.filter(city => normalizeSearchText(city).includes(keyword));
   }, [cinemaCityOptions, citySearch]);
   const highlightedCinemas = cinemaGroups[activeCinemaCity] ?? [];
 
@@ -243,7 +252,7 @@ const HomePage = () => {
                 </button>
               )}
             </div>
-            <div className="mt-3 max-h-72 space-y-2 overflow-y-auto pr-1">
+            <div className="mt-3 max-h-[136px] space-y-2 overflow-y-auto overscroll-contain pr-1">
               {filteredCinemaCityOptions.map(city => {
                 const items = cinemaGroups[city] ?? [];
                 const active = city === activeCinemaCity;

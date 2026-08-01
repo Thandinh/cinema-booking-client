@@ -74,15 +74,19 @@ const AdminAuditLogPage = () => {
   const [action, setAction] = useState<ActionFilter>('ALL');
   const [resource, setResource] = useState<ResourceFilter>('ALL');
   const [result, setResult] = useState<ResultFilter>('ALL');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['admin-audit-logs', keyword, action, resource, result, page],
+    queryKey: ['admin-audit-logs', keyword, action, resource, result, fromDate, toDate, page],
     queryFn: () =>
       auditLogApi.getAuditLogs({
         keyword: keyword.trim() || undefined,
         action: action === 'ALL' ? undefined : action,
         resource: resource === 'ALL' ? undefined : resource,
         success: result === 'ALL' ? undefined : result === 'SUCCESS',
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
         page,
         size: 18,
         sort: 'createdAt,desc',
@@ -136,6 +140,26 @@ const AdminAuditLogPage = () => {
               <FilterSelect value={action} onChange={(value) => { setAction(value as ActionFilter); setPage(0); }} options={ACTION_OPTIONS} />
               <FilterSelect value={resource} onChange={(value) => { setResource(value as ResourceFilter); setPage(0); }} options={RESOURCE_OPTIONS} />
               <FilterSelect value={result} onChange={(value) => { setResult(value as ResultFilter); setPage(0); }} options={RESULT_OPTIONS} />
+            </div>
+
+            <div className="grid gap-3 rounded-lg bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-neutral-950 dark:ring-white/10 sm:grid-cols-[1fr_1fr_auto]">
+              <DateInput label="Từ ngày" value={fromDate} max={toDate || undefined} onChange={(value) => { setFromDate(value); setPage(0); }} />
+              <DateInput label="Đến ngày" value={toDate} min={fromDate || undefined} onChange={(value) => { setToDate(value); setPage(0); }} />
+              <button
+                type="button"
+                onClick={() => {
+                  setKeyword('');
+                  setAction('ALL');
+                  setResource('ALL');
+                  setResult('ALL');
+                  setFromDate('');
+                  setToDate('');
+                  setPage(0);
+                }}
+                className="btn-ghost h-10 self-end px-4 text-xs"
+              >
+                Xóa lọc
+              </button>
             </div>
 
             <div className="flex items-center gap-2 text-xs font-semibold cinema-muted">
@@ -235,6 +259,34 @@ const FilterSelect = ({
       <option key={option.value} value={option.value}>{option.label}</option>
     ))}
   </select>
+);
+
+const DateInput = ({
+  label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  min?: string;
+  max?: string;
+  onChange: (value: string) => void;
+}) => (
+  <label className="block">
+    <span className="mb-1 block text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:text-neutral-500">
+      {label}
+    </span>
+    <input
+      type="date"
+      value={value}
+      min={min}
+      max={max}
+      onChange={(event) => onChange(event.target.value)}
+      className="cinema-input h-10 py-0"
+    />
+  </label>
 );
 
 const AuditLogRow = ({ log }: { log: AdminAuditLogResponse }) => {

@@ -21,6 +21,7 @@ import {
   type PromotionRequest,
   type PromotionResponse,
 } from '../../api/promotionApi';
+import { useAuthStore } from '../../stores/authStore';
 import { formatDateTime, formatMoney } from '../../utils/format';
 
 type PromotionFormState = {
@@ -60,6 +61,7 @@ const emptyForm: PromotionFormState = {
 
 const AdminPromotionPage = () => {
   const queryClient = useQueryClient();
+  const hasPermission = useAuthStore(state => state.hasPermission);
   const [page, setPage] = useState(0);
   const [keyword, setKeyword] = useState('');
   const [status, setStatus] = useState<PromotionAdminStatus>('ALL');
@@ -67,6 +69,10 @@ const AdminPromotionPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [form, setForm] = useState<PromotionFormState>(emptyForm);
   const [formError, setFormError] = useState('');
+  const canCreatePromotion = hasPermission('PROMOTION_CREATE');
+  const canUpdatePromotion = hasPermission('PROMOTION_UPDATE');
+  const canDeletePromotion = hasPermission('PROMOTION_DELETE');
+  const canManagePromotion = canUpdatePromotion || canDeletePromotion;
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin-promotions', status, keyword, page],
@@ -106,6 +112,7 @@ const AdminPromotionPage = () => {
   const inactivePromotionCount = promotions.filter(item => !item.isActive).length;
 
   const openCreateModal = () => {
+    if (!canCreatePromotion) return;
     setEditingPromotion(null);
     setForm(emptyForm);
     setFormError('');
@@ -113,6 +120,7 @@ const AdminPromotionPage = () => {
   };
 
   const openEditModal = (promotion: PromotionResponse) => {
+    if (!canUpdatePromotion) return;
     setEditingPromotion(promotion);
     setForm({
       code: promotion.code,
@@ -139,6 +147,10 @@ const AdminPromotionPage = () => {
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     setFormError('');
+    if (editingPromotion ? !canUpdatePromotion : !canCreatePromotion) {
+      setFormError('Bạn không có quyền thực hiện thao tác này.');
+      return;
+    }
 
     const payload = buildPayload(form, Boolean(editingPromotion));
     const validationError = validatePayload(payload);
@@ -151,6 +163,7 @@ const AdminPromotionPage = () => {
   };
 
   const handleDelete = (promotion: PromotionResponse) => {
+    if (!canDeletePromotion) return;
     const ok = window.confirm(`Xóa mã khuyến mãi ${promotion.code}? Mã sẽ không còn áp dụng cho đơn mới.`);
     if (ok) {
       deleteMutation.mutate(promotion.id);
@@ -183,10 +196,12 @@ const AdminPromotionPage = () => {
             <div className="rounded-lg bg-white px-4 py-3 text-sm font-semibold text-slate-600 ring-1 ring-slate-200 dark:bg-neutral-900 dark:text-neutral-300 dark:ring-white/10">
               Đã tắt <span className="font-black text-slate-950 dark:text-white">{inactivePromotionCount}</span>
             </div>
-            <button type="button" onClick={openCreateModal} className="btn-primary h-11 px-4">
-              <Plus size={16} />
-              Thêm mã
-            </button>
+            {canCreatePromotion && (
+              <button type="button" onClick={openCreateModal} className="btn-primary h-11 px-4">
+                <Plus size={16} />
+                Thêm mã
+              </button>
+            )}
           </div>
         </div>
 
@@ -237,13 +252,13 @@ const AdminPromotionPage = () => {
                   <th className="px-5 py-4">Thời gian</th>
                   <th className="px-5 py-4">Lượt dùng</th>
                   <th className="px-5 py-4">Trạng thái</th>
-                  <th className="px-5 py-4 text-right">Thao tác</th>
+                  {canManagePromotion && <th className="px-5 py-4 text-right">Thao tác</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-16 text-center">
+                    <td colSpan={canManagePromotion ? 7 : 6} className="px-5 py-16 text-center">
                       <div className="inline-flex items-center gap-2 text-sm font-semibold cinema-muted">
                         <Loader2 size={17} className="animate-spin text-amber-500" />
                         Đang tải khuyến mãi...
@@ -252,7 +267,7 @@ const AdminPromotionPage = () => {
                   </tr>
                 ) : isError ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-16 text-center">
+                    <td colSpan={canManagePromotion ? 7 : 6} className="px-5 py-16 text-center">
                       <div className="mx-auto max-w-md rounded-lg bg-red-50 p-4 text-sm font-semibold text-red-700 ring-1 ring-red-200 dark:bg-red-500/10 dark:text-red-300 dark:ring-red-500/20">
                         {(error as any)?.response?.data?.message || 'Không thể tải danh sách khuyến mãi'}
                       </div>
@@ -260,7 +275,7 @@ const AdminPromotionPage = () => {
                   </tr>
                 ) : promotions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-5 py-16 text-center">
+                    <td colSpan={canManagePromotion ? 7 : 6} className="px-5 py-16 text-center">
                       <p className="text-sm font-semibold cinema-muted">Chưa có mã khuyến mãi phù hợp bộ lọc.</p>
                     </td>
                   </tr>
@@ -272,6 +287,8 @@ const AdminPromotionPage = () => {
                       onEdit={openEditModal}
                       onDelete={handleDelete}
                       deleting={deleteMutation.isPending}
+                      canUpdate={canUpdatePromotion}
+                      canDelete={canDeletePromotion}
                     />
                   ))
                 )}
@@ -457,11 +474,15 @@ const PromotionRow = ({
   onEdit,
   onDelete,
   deleting,
+  canUpdate,
+  canDelete,
 }: {
   promotion: PromotionResponse;
   onEdit: (promotion: PromotionResponse) => void;
   onDelete: (promotion: PromotionResponse) => void;
   deleting: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) => {
   const state = resolvePromotionState(promotion);
   const StateIcon = state.icon;
@@ -527,16 +548,22 @@ const PromotionRow = ({
         </span>
       </td>
 
-      <td className="px-5 py-4">
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={() => onEdit(promotion)} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white" title="Sửa">
-            <Edit3 size={16} />
-          </button>
-          <button type="button" disabled={deleting} onClick={() => onDelete(promotion)} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-neutral-400 dark:hover:bg-red-500/10 dark:hover:text-red-300" title="Xóa">
-            <Trash2 size={16} />
-          </button>
-        </div>
-      </td>
+      {(canUpdate || canDelete) && (
+        <td className="px-5 py-4">
+          <div className="flex justify-end gap-2">
+            {canUpdate && (
+              <button type="button" onClick={() => onEdit(promotion)} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-white" title="Sửa">
+                <Edit3 size={16} />
+              </button>
+            )}
+            {canDelete && (
+              <button type="button" disabled={deleting} onClick={() => onDelete(promotion)} className="grid size-9 place-items-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 dark:text-neutral-400 dark:hover:bg-red-500/10 dark:hover:text-red-300" title="Xóa">
+                <Trash2 size={16} />
+              </button>
+            )}
+          </div>
+        </td>
+      )}
     </tr>
   );
 };

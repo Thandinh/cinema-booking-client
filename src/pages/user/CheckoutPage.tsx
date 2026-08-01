@@ -82,6 +82,9 @@ const CheckoutPage = () => {
     if (seats.length === 0) return 'Chưa có thông tin ghế';
     return seats.map(seat => `${seat.rowLabel}${seat.seatNumber}`).join(', ');
   }, [booking]);
+  const bookingStatus = booking?.status;
+  const bookingTotalPrice = booking?.totalPrice;
+  const sePayAmount = sePayQr?.amount;
 
   useEffect(() => {
     setPromotionCode(booking?.promotionCode ?? '');
@@ -134,15 +137,15 @@ const CheckoutPage = () => {
   }, [sePayQr]);
 
   useEffect(() => {
-    if (!sePayQr || !booking || booking.status !== 'PENDING') {
+    if (!sePayAmount || bookingStatus !== 'PENDING' || bookingTotalPrice == null) {
       return;
     }
 
-    const qrAmount = Number(sePayQr.amount);
-    if (Number.isFinite(qrAmount) && qrAmount !== booking.totalPrice) {
+    const qrAmount = Number(sePayAmount);
+    if (Number.isFinite(qrAmount) && qrAmount !== bookingTotalPrice) {
       setSePayQr(null);
     }
-  }, [booking?.status, booking?.totalPrice, sePayQr?.amount]);
+  }, [bookingStatus, bookingTotalPrice, sePayAmount]);
 
   const paymentExpired = booking?.status === 'EXPIRED' || remainingSeconds === 0;
   const paymentInstructionLocked = Boolean(sePayQr && booking?.status === 'PENDING');
